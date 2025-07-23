@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(uvicorn:*)",
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(python:*)",
+      "Bash(find:*)",
+      "Bash(chmod:*)",
+      "Bash(./test_all_apis.sh:*)",
+      "Bash(rm:*)",
+      "Bash(./start_server.sh:*)",
+      "Bash(brew:*)",
+      "Bash(true)",
+      "Bash(ls:*)"
+    ],
+    "deny": []
+  }
+}
