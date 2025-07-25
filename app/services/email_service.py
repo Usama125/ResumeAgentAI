@@ -30,7 +30,7 @@ class EmailService:
             print(f"✅ [EMAIL SERVICE] Gmail SMTP configured for: {self.from_email}")
             
             # Create reset link - adjust the domain as needed
-            reset_link = f"https://resume-agent-frontend.vercel.app/auth/reset-password?token={reset_token}"
+            reset_link = f"https://cvchatter.com/auth/reset-password?token={reset_token}"
             
             html_content = f"""
             <!DOCTYPE html>

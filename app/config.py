@@ -54,10 +54,9 @@ class Settings(BaseSettings):
     # CORS - Strict Origin Control
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
-        "https://resume-agent-frontend.vercel.app", 
+        "https://cvchatter.com", 
+        "https://www.cvchatter.com", 
         "http://127.0.0.1:3000",
-        "https://your-frontend-domain.com",  # Replace with your actual domain
-        "https://www.your-frontend-domain.com"
     ]
 
     class Config:
