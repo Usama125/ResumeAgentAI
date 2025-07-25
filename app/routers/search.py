@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from typing import List, Optional
 from app.models.user import PublicUserResponse
 from app.services.user_service import UserService
+from app.middleware.advanced_rate_limiting import advanced_rate_limit_job_matching
 
 router = APIRouter()
 user_service = UserService()
 
 @router.get("/users", response_model=List[PublicUserResponse])
+@advanced_rate_limit_job_matching()
 async def search_users(
+    request: Request,
     q: Optional[str] = Query(None, description="Search query"),
     skills: Optional[str] = Query(None, description="Comma-separated skills"),
     location: Optional[str] = Query(None, description="Location filter"),

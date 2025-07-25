@@ -20,7 +20,18 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     ALLOWED_FILE_TYPES: List[str] = ["pdf", "jpg", "jpeg", "png"]
     
-    # Rate Limiting
+    # Rate Limiting - Unauthenticated Users
+    UNAUTH_DAILY_JOB_MATCHING_LIMIT: int = 3
+    UNAUTH_DAILY_CHAT_LIMIT: int = 10
+    
+    # Rate Limiting - Authenticated Users
+    AUTH_DAILY_JOB_MATCHING_LIMIT: int = 5
+    AUTH_DAILY_CHAT_LIMIT: int = 15
+    
+    # Rate Limiting - Reset Time Configuration
+    RATE_LIMIT_RESET_HOURS: int = 24  # Hours until rate limit resets
+    
+    # Legacy Rate Limiting (deprecated)
     DAILY_REQUEST_LIMIT: int = 10
     DAILY_JOB_MATCHING_LIMIT: int = 3
     

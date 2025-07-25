@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Optional
 from datetime import datetime, timedelta
 from pydantic import BaseModel, EmailStr, Field
 from app.models.user import UserCreate, UserResponse, UserInDB
@@ -108,6 +109,21 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="User not found"
         )
     return user
+
+async def get_current_user_optional(request: Request) -> Optional[UserInDB]:
+    """Get current user if authenticated, None otherwise"""
+    try:
+        # Try to get authorization header
+        authorization = request.headers.get("authorization")
+        if not authorization or not authorization.startswith("Bearer "):
+            return None
+        
+        token = authorization.split(" ")[1]
+        user_id, _ = verify_token(token, "access")
+        user = await auth_service.get_user_by_id(user_id)
+        return user
+    except:
+        return None
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str

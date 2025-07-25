@@ -4,7 +4,7 @@ from app.models.job_matching import JobSearchQuery, JobMatchResponse, JobMatchRe
 from app.services.job_matching_service import JobMatchingService
 from app.routers.auth import get_current_user
 from app.utils.secure_auth import verify_secure_request
-from app.utils.job_matching_rate_limiter import job_matching_rate_limiter
+from app.middleware.advanced_rate_limiting import advanced_rate_limit_job_matching
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,6 +13,7 @@ router = APIRouter()
 job_matching_service = JobMatchingService()
 
 @router.post("/search", response_model=JobMatchResponse)
+@advanced_rate_limit_job_matching()
 async def search_matching_candidates(
     search_query: JobSearchQuery,
     request: Request,
@@ -50,6 +51,7 @@ async def search_matching_candidates(
         )
 
 @router.get("/search", response_model=JobMatchResponse)
+@advanced_rate_limit_job_matching()
 async def search_candidates_by_query(
     request: Request,
     q: str = Query(..., description="Job description or search query"),
@@ -100,6 +102,7 @@ async def search_candidates_by_query(
         )
 
 @router.get("/summary")
+@advanced_rate_limit_job_matching()
 async def get_job_match_summary(
     request: Request,
     q: str = Query(..., description="Job description or search query"),
@@ -129,6 +132,7 @@ async def get_job_match_summary(
         )
 
 @router.get("/analyze/{user_id}")
+@advanced_rate_limit_job_matching()
 async def analyze_candidate_for_job(
     user_id: str,
     request: Request,

@@ -94,6 +94,8 @@ class UserInDB(UserBase):
     onboarding_progress: OnboardingProgress = Field(default_factory=lambda: OnboardingProgress())
     daily_requests: int = 0
     last_request_reset: datetime = Field(default_factory=datetime.utcnow)
+    job_matching_request_timestamps: Optional[list] = Field(default_factory=list)
+    chat_request_timestamps: Optional[list] = Field(default_factory=list)
     refresh_token_jti: Optional[str] = None  # Store current refresh token ID
     refresh_token_expires_at: Optional[datetime] = None
     password_reset_token: Optional[str] = None  # Store password reset token

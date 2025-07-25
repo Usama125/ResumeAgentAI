@@ -45,6 +45,8 @@ class AuthService:
         user_dict["daily_requests"] = 0
         user_dict["last_request_reset"] = datetime.utcnow()
         user_dict["rating"] = 4.5
+        user_dict["job_matching_request_timestamps"] = []
+        user_dict["chat_request_timestamps"] = []
         
         result = await db.users.insert_one(user_dict)
         user_dict["_id"] = str(result.inserted_id)
