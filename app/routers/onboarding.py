@@ -6,6 +6,7 @@ import os
 import json
 from app.services.pdf_service import PDFService
 from app.services.user_service import UserService
+from app.services.file_service import FileService
 from app.routers.auth import get_current_user
 from app.config import settings
 from app.models.onboarding import (
@@ -18,6 +19,7 @@ from app.models.user import UserUpdate, OnboardingStepStatus
 router = APIRouter()
 pdf_service = PDFService()
 user_service = UserService()
+file_service = FileService()
 
 @router.get("/status", response_model=OnboardingStatusResponse)
 async def get_onboarding_status(current_user = Depends(get_current_user)):
@@ -270,28 +272,9 @@ async def step_2_profile_info(
         
         # Handle profile picture upload
         if profile_picture:
-            # Validate image file
-            if not any(profile_picture.filename.lower().endswith(ext) for ext in ['jpg', 'jpeg', 'png']):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Only JPG, JPEG, PNG files are allowed for profile pictures"
-                )
-            
-            # Save profile picture
-            file_extension = profile_picture.filename.split('.')[-1]
-            unique_filename = f"profile_{current_user.id}_{uuid.uuid4()}.{file_extension}"
-            profile_dir = os.path.join(settings.UPLOAD_DIR, "profiles")
-            
-            if not os.path.exists(profile_dir):
-                os.makedirs(profile_dir)
-            
-            file_path = os.path.join(profile_dir, unique_filename)
-            
-            with open(file_path, "wb") as buffer:
-                content = await profile_picture.read()
-                buffer.write(content)
-            
-            update_data["profile_picture"] = f"/uploads/profiles/{unique_filename}"
+            # Upload to S3 using file service
+            profile_picture_url = await file_service.save_profile_picture(profile_picture, current_user.username)
+            update_data["profile_picture"] = profile_picture_url
         
         # Update other profile fields
         if name:
@@ -612,28 +595,8 @@ async def complete_onboarding(
         # Handle profile picture upload
         profile_picture_url = None
         if profile_picture:
-            # Validate image file
-            if not any(profile_picture.filename.lower().endswith(ext) for ext in ['jpg', 'jpeg', 'png']):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Only JPG, JPEG, PNG files are allowed for profile pictures"
-                )
-            
-            # Save profile picture
-            file_extension = profile_picture.filename.split('.')[-1]
-            unique_filename = f"profile_{current_user.id}_{uuid.uuid4()}.{file_extension}"
-            profile_dir = os.path.join(settings.UPLOAD_DIR, "profiles")
-            
-            if not os.path.exists(profile_dir):
-                os.makedirs(profile_dir)
-            
-            file_path = os.path.join(profile_dir, unique_filename)
-            
-            with open(file_path, "wb") as buffer:
-                content = await profile_picture.read()
-                buffer.write(content)
-            
-            profile_picture_url = f"/uploads/profiles/{unique_filename}"
+            # Upload to S3 using file service
+            profile_picture_url = await file_service.save_profile_picture(profile_picture, current_user.username)
         
         # Prepare update data
         update_data = {

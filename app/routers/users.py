@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File
 from typing import List
 from app.models.user import UserResponse, UserUpdate, PublicUserResponse
 from app.services.user_service import UserService
 from app.services.auth_service import AuthService
+from app.services.file_service import FileService
 from app.routers.auth import get_current_user
 from app.database import get_database
 from app.middleware.debug_rate_limiting import debug_rate_limit_job_matching
@@ -10,6 +11,7 @@ from app.middleware.debug_rate_limiting import debug_rate_limit_job_matching
 router = APIRouter()
 user_service = UserService()
 auth_service = AuthService()
+file_service = FileService()
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user = Depends(get_current_user)):
@@ -84,6 +86,69 @@ async def get_user_profile_by_username(username: str):
         )
     
     return public_user
+
+@router.post("/me/profile-picture")
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_user)
+):
+    """Upload or update profile picture"""
+    try:
+        # Upload to S3
+        profile_picture_url = await file_service.save_profile_picture(file, current_user.username)
+        
+        # Update user profile with new picture URL
+        update_data = UserUpdate(profile_picture=profile_picture_url)
+        updated_user = await user_service.update_user(str(current_user.id), update_data)
+        
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update profile picture"
+            )
+        
+        return {
+            "success": True,
+            "message": "Profile picture updated successfully",
+            "profile_picture_url": profile_picture_url
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload profile picture: {str(e)}"
+        )
+
+@router.delete("/me/profile-picture")
+async def delete_profile_picture(current_user = Depends(get_current_user)):
+    """Delete profile picture"""
+    try:
+        # Delete from S3
+        deleted = await file_service.delete_profile_picture(current_user.username)
+        
+        if deleted:
+            # Update user profile to remove picture URL
+            update_data = UserUpdate(profile_picture=None)
+            updated_user = await user_service.update_user(str(current_user.id), update_data)
+            
+            if not updated_user:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update user profile"
+                )
+        
+        return {
+            "success": True,
+            "message": "Profile picture deleted successfully"
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete profile picture: {str(e)}"
+        )
 
 @router.get("/", response_model=List[PublicUserResponse])
 async def get_featured_users(limit: int = 12, skip: int = 0):
