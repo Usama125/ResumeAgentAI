@@ -285,6 +285,8 @@ async def step_2_profile_info(
             update_data["location"] = location
         if summary:
             update_data["summary"] = summary
+        if additional_info:
+            update_data["additional_info"] = additional_info
         
         update_data["is_looking_for_job"] = is_looking_for_job
         
@@ -384,6 +386,8 @@ async def step_4_salary_availability(
 ):
     """Step 4: Set salary and availability - Final step"""
     
+
+    
     # Validate current step
     if current_user.onboarding_progress.current_step != 4:
         raise HTTPException(
@@ -393,8 +397,6 @@ async def step_4_salary_availability(
     
     try:
         update_data = {
-            "current_salary": current_salary,
-            "expected_salary": expected_salary,
             "onboarding_completed": True,
             "onboarding_progress": {
                 "step_1_pdf_upload": current_user.onboarding_progress.step_1_pdf_upload,
@@ -405,6 +407,14 @@ async def step_4_salary_availability(
                 "completed": True
             }
         }
+        
+        # Only add salary fields if they have values (not empty strings)
+        if current_salary and current_salary.strip():
+            update_data["current_salary"] = current_salary
+        if expected_salary and expected_salary.strip():
+            update_data["expected_salary"] = expected_salary
+        
+
         
         # Update work preferences with availability if provided
         if current_user.work_preferences:

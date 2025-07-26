@@ -23,6 +23,7 @@ class Project(BaseModel):
     description: str = "No description provided"  # Default value to handle missing descriptions
     technologies: List[str] = []  # Default empty list to handle missing technologies
     url: Optional[str] = None
+    github_url: Optional[str] = None
     duration: Optional[str] = None
 
 class OnboardingStepStatus(str, Enum):
@@ -59,6 +60,7 @@ class UserBase(BaseModel):
     current_salary: Optional[str] = None
     experience: Optional[str] = None
     summary: Optional[str] = None
+    additional_info: Optional[str] = None
     skills: List[Skill] = []
     experience_details: List[Experience] = []
     projects: List[Project] = []
@@ -80,6 +82,7 @@ class UserUpdate(BaseModel):
     expected_salary: Optional[str] = None
     current_salary: Optional[str] = None
     summary: Optional[str] = None
+    additional_info: Optional[str] = None
     skills: Optional[List[Skill]] = None
     experience_details: Optional[List[Experience]] = None
     projects: Optional[List[Project]] = None
