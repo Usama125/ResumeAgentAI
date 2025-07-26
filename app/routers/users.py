@@ -2,12 +2,14 @@ from fastapi import APIRouter, HTTPException, Depends, status, Request
 from typing import List
 from app.models.user import UserResponse, UserUpdate, PublicUserResponse
 from app.services.user_service import UserService
+from app.services.auth_service import AuthService
 from app.routers.auth import get_current_user
 from app.database import get_database
 from app.middleware.debug_rate_limiting import debug_rate_limit_job_matching
 
 router = APIRouter()
 user_service = UserService()
+auth_service = AuthService()
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user = Depends(get_current_user)):
@@ -61,6 +63,27 @@ async def get_user_profile(user_id: str):
         )
     
     return user
+
+@router.get("/username/{username}", response_model=PublicUserResponse)
+async def get_user_profile_by_username(username: str):
+    """Get public user profile by username"""
+    user = await auth_service.get_user_by_username(username)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Convert to public user response
+    public_user = await user_service.get_public_user(str(user.id))
+    if not public_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return public_user
 
 @router.get("/", response_model=List[PublicUserResponse])
 async def get_featured_users(limit: int = 12, skip: int = 0):

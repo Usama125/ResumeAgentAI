@@ -26,6 +26,7 @@ class UserService:
         return PublicUserResponse(
             id=str(user.id),
             name=user.name,
+            username=user.username,
             designation=user.designation or "",
             location=user.location or "",
             profile_picture=user.profile_picture,
@@ -98,6 +99,7 @@ class UserService:
             PublicUserResponse(
                 id=str(user["_id"]),
                 name=user["name"],
+                username=user.get("username"),
                 designation=user.get("designation") or "",
                 location=user.get("location") or "",
                 profile_picture=user.get("profile_picture"),
@@ -125,6 +127,7 @@ class UserService:
             PublicUserResponse(
                 id=str(user["_id"]),
                 name=user["name"],
+                username=user.get("username"),
                 designation=user.get("designation") or "",
                 location=user.get("location") or "",
                 profile_picture=user.get("profile_picture"),

@@ -28,6 +28,15 @@ class AuthService:
         except Exception:
             return None
 
+    async def get_user_by_username(self, username: str) -> Optional[UserInDB]:
+        """Get user by username"""
+        db = await get_database()
+        user_data = await db.users.find_one({"username": username})
+        if user_data:
+            user_data["_id"] = str(user_data["_id"])
+            return UserInDB(**user_data)
+        return None
+
     async def create_user(self, user: UserCreate) -> UserInDB:
         """Create new user"""
         db = await get_database()

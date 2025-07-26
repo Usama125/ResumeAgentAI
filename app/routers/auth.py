@@ -8,6 +8,7 @@ from app.services.auth_service import AuthService
 from app.services.email_service import email_service
 from app.services.google_oauth_service import GoogleOAuthService
 from app.utils.security import create_access_token, create_refresh_token, verify_token
+from app.utils.username_generator import UsernameGenerator
 from app.config import settings
 import logging
 
@@ -20,6 +21,22 @@ auth_service = AuthService()
 @router.post("/register", response_model=dict)
 async def register(user: UserCreate):
     """Register a new user"""
+    # Validate username
+    is_valid, error_message = UsernameGenerator.validate_username(user.username)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_message
+        )
+    
+    # Check if username is available
+    is_available = await UsernameGenerator.is_username_available(user.username)
+    if not is_available:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is already taken"
+        )
+    
     # Check if user already exists
     existing_user = await auth_service.get_user_by_email(user.email)
     if existing_user:
@@ -353,17 +370,22 @@ async def google_oauth(oauth_request: GoogleOAuthRequest):
             # Create new user from Google data
             print(f"🆕 [GOOGLE OAUTH] Creating new user for: {google_user_info['email']}")
             
+            # Generate unique username from name
+            generated_username = await UsernameGenerator.generate_username_from_name(google_user_info['name'])
+            print(f"✅ [GOOGLE OAUTH] Generated username: {generated_username}")
+            
             # Create user object
             new_user_data = UserCreate(
                 email=google_user_info['email'],
                 name=google_user_info['name'],
+                username=generated_username,
                 password="google_oauth_user",  # Placeholder password for OAuth users
                 google_id=google_user_info['google_id'],
                 profile_picture_url=google_user_info.get('picture', '')
             )
             
             user = await auth_service.create_user(new_user_data)
-            print(f"✅ [GOOGLE OAUTH] New user created: {user.email}")
+            print(f"✅ [GOOGLE OAUTH] New user created: {user.email} with username: {generated_username}")
         
         # Generate tokens
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -403,4 +425,43 @@ async def google_oauth(oauth_request: GoogleOAuthRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Google authentication failed"
+        )
+
+class UsernameCheckRequest(BaseModel):
+    username: str
+
+@router.post("/check-username", response_model=dict)
+async def check_username_availability(request: UsernameCheckRequest):
+    """Check if username is available and valid"""
+    try:
+        # Validate username format
+        is_valid, error_message = UsernameGenerator.validate_username(request.username)
+        if not is_valid:
+            return {
+                "available": False,
+                "valid": False,
+                "message": error_message
+            }
+        
+        # Check availability
+        is_available = await UsernameGenerator.is_username_available(request.username)
+        
+        if is_available:
+            return {
+                "available": True,
+                "valid": True,
+                "message": "Username is available"
+            }
+        else:
+            return {
+                "available": False,
+                "valid": True,
+                "message": "Username is already taken"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error checking username availability: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to check username availability"
         )

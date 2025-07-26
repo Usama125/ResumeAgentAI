@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     
+    # AWS S3 Configuration
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_REGION: str = ""
+    AWS_S3_BUCKET_NAME: str = ""
+    
     # CORS - Strict Origin Control
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",

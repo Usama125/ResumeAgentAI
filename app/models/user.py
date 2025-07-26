@@ -49,6 +49,7 @@ class WorkPreferences(BaseModel):
 class UserBase(BaseModel):
     email: EmailStr
     name: str
+    username: Optional[str] = None
     designation: Optional[str] = None
     location: Optional[str] = None
     profile_picture: Optional[str] = None
@@ -68,6 +69,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
+    username: str = Field(..., min_length=3, max_length=30, pattern="^[a-z0-9_-]+$")
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -120,6 +122,7 @@ class UserResponse(UserBase):
 class PublicUserResponse(BaseModel):
     id: str
     name: str
+    username: Optional[str] = None
     designation: Optional[str] = ""
     location: Optional[str] = ""
     profile_picture: Optional[str] = None
