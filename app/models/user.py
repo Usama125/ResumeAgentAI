@@ -6,14 +6,14 @@ from enum import Enum
 
 class Skill(BaseModel):
     name: str
-    level: str = Field(..., pattern="^(Expert|Advanced|Intermediate|Beginner)$")
-    years: int = Field(..., ge=0, le=50)
+    level: Optional[str] = "Intermediate"  # Default level, no strict validation
+    years: Optional[int] = Field(default=0, ge=0, le=50)  # Optional with default
 
 class Experience(BaseModel):
     company: str
     position: str
     duration: str
-    description: str
+    description: Optional[str] = "No description provided"  # Make optional with default
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     current: bool = False
@@ -47,6 +47,55 @@ class WorkPreferences(BaseModel):
     notice_period: Optional[str] = None
     availability: str = "immediate"
 
+class ContactInfo(BaseModel):
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    linkedin: Optional[str] = None
+    github: Optional[str] = None
+    portfolio: Optional[str] = None
+    website: Optional[str] = None
+    twitter: Optional[str] = None
+    dribbble: Optional[str] = None
+    behance: Optional[str] = None
+    medium: Optional[str] = None
+    instagram: Optional[str] = None
+    facebook: Optional[str] = None
+    youtube: Optional[str] = None
+
+class Education(BaseModel):
+    institution: str
+    degree: Optional[str] = None
+    field_of_study: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    grade: Optional[str] = None
+    activities: Optional[str] = None
+    description: Optional[str] = None
+
+class Language(BaseModel):
+    name: str
+    proficiency: Optional[str] = "Intermediate"  # Remove strict pattern validation, use default
+
+class Award(BaseModel):
+    title: str
+    issuer: Optional[str] = None
+    date: Optional[str] = None
+    description: Optional[str] = None
+
+class Publication(BaseModel):
+    title: str
+    publisher: Optional[str] = None
+    date: Optional[str] = None
+    url: Optional[str] = None
+    description: Optional[str] = None
+
+class VolunteerExperience(BaseModel):
+    organization: str
+    role: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    description: Optional[str] = None
+
 class UserBase(BaseModel):
     email: EmailStr
     name: str
@@ -68,6 +117,15 @@ class UserBase(BaseModel):
     work_preferences: Optional[WorkPreferences] = None
     onboarding_progress: Optional[OnboardingProgress] = Field(default_factory=lambda: OnboardingProgress())
     google_id: Optional[str] = None
+    # Enhanced fields
+    contact_info: Optional[ContactInfo] = Field(default_factory=lambda: ContactInfo())
+    education: List[Education] = []
+    languages: List[Language] = []
+    awards: List[Award] = []
+    publications: List[Publication] = []
+    volunteer_experience: List[VolunteerExperience] = []
+    interests: List[str] = []
+    profession: Optional[str] = None  # Auto-detected from resume
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -90,6 +148,15 @@ class UserUpdate(BaseModel):
     work_preferences: Optional[WorkPreferences] = None
     onboarding_progress: Optional[OnboardingProgress] = None
     onboarding_completed: Optional[bool] = None
+    # Enhanced fields
+    contact_info: Optional[ContactInfo] = None
+    education: Optional[List[Education]] = None
+    languages: Optional[List[Language]] = None
+    awards: Optional[List[Award]] = None
+    publications: Optional[List[Publication]] = None
+    volunteer_experience: Optional[List[VolunteerExperience]] = None
+    interests: Optional[List[str]] = None
+    profession: Optional[str] = None
 
 class UserInDB(UserBase):
     id: Optional[str] = Field(default=None, alias="_id")
@@ -108,6 +175,15 @@ class UserInDB(UserBase):
     google_id: Optional[str] = None  # Google OAuth ID
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    # Enhanced fields with defaults for backward compatibility
+    contact_info: ContactInfo = Field(default_factory=lambda: ContactInfo())
+    education: List[Education] = Field(default_factory=list)
+    languages: List[Language] = Field(default_factory=list)
+    awards: List[Award] = Field(default_factory=list)
+    publications: List[Publication] = Field(default_factory=list)
+    volunteer_experience: List[VolunteerExperience] = Field(default_factory=list)
+    interests: List[str] = Field(default_factory=list)
+    profession: Optional[str] = None
 
     model_config = ConfigDict(
         populate_by_name=True,

@@ -4,7 +4,7 @@ from typing import Optional
 import uuid
 import os
 import json
-from app.services.pdf_service import PDFService
+from app.services.pdf_service import DocumentService
 from app.services.user_service import UserService
 from app.services.file_service import FileService
 from app.routers.auth import get_current_user
@@ -17,7 +17,7 @@ from app.models.onboarding import (
 from app.models.user import UserUpdate, OnboardingStepStatus
 
 router = APIRouter()
-pdf_service = PDFService()
+document_service = DocumentService()
 user_service = UserService()
 file_service = FileService()
 
@@ -38,9 +38,9 @@ async def step_1_pdf_upload(
     file: UploadFile = File(...),
     current_user = Depends(get_current_user)
 ):
-    """Step 1: Upload and process LinkedIn PDF"""
+    """Step 1: Upload and process resume document (PDF, Word, etc.) - Enhanced to support multiple formats"""
     
-    print(f"🚀 [ONBOARDING] PDF upload started for user: {current_user.id}")
+    print(f"🚀 [ONBOARDING] Document upload started for user: {current_user.id}")
     print(f"🔍 [ONBOARDING] Current step: {current_user.onboarding_progress.current_step}")
     print(f"🔍 [ONBOARDING] File: {file.filename}, size: {file.size}")
     
@@ -52,11 +52,14 @@ async def step_1_pdf_upload(
             detail=f"Current step is {current_user.onboarding_progress.current_step}, expected step 1"
         )
     
-    # Validate file
-    if not file.filename.lower().endswith('.pdf'):
+    # Validate file format - support PDF, Word documents
+    supported_extensions = ['.pdf', '.docx', '.doc']
+    file_extension = '.' + file.filename.lower().split('.')[-1] if '.' in file.filename else ''
+    
+    if file_extension not in supported_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF files are allowed"
+            detail=f"Unsupported file format. Supported formats: {', '.join(supported_extensions)}"
         )
     
     if not file.size or file.size > settings.MAX_FILE_SIZE:
@@ -77,136 +80,87 @@ async def step_1_pdf_upload(
         file_content = await file.read()
         print(f"✅ [ONBOARDING] File content read: {len(file_content)} bytes")
         
-        # Save and process PDF
-        print("📁 [ONBOARDING] Saving PDF file...")
-        file_path = await pdf_service.save_uploaded_pdf(file_content, unique_filename)
-        print(f"✅ [ONBOARDING] PDF saved to: {file_path}")
+        # Save and process document
+        print("📁 [ONBOARDING] Saving document file...")
+        file_path = await document_service.save_uploaded_document(file_content, unique_filename)
+        print(f"✅ [ONBOARDING] Document saved to: {file_path}")
         
-        print("⚙️ [ONBOARDING] Starting PDF processing...")
-        result = await pdf_service.process_linkedin_pdf(file_path)
-        print(f"✅ [ONBOARDING] PDF processing result: {result.get('success', False)}")
+        print("⚙️ [ONBOARDING] Starting document processing...")
+        result = await document_service.process_resume_document(file_path, file.filename, str(current_user.id))
+        print(f"✅ [ONBOARDING] Document processing result: {result.get('success', False)}")
         
         if result.get('success'):
             # Update user with extracted data (even if empty)
             extracted_data = result.get('extracted_data', {})
+            qa_verification = extracted_data.get('qa_verification', {}) if extracted_data else {}
             update_data = {}
             
             print(f"📝 [ONBOARDING] Processing extracted data: {len(extracted_data)} fields found")
+            print(f"🔍 [ONBOARDING] QA Verification: {qa_verification}")
             
-            # Process extracted data if available, otherwise just mark step as completed
+            # Process extracted data - AI provides clean, structured data
             if extracted_data:
-                if "name" in extracted_data:
-                    update_data["name"] = extracted_data["name"]
-                if "designation" in extracted_data:
-                    update_data["designation"] = extracted_data["designation"]
-                if "location" in extracted_data:
-                    update_data["location"] = extracted_data["location"]
-                if "summary" in extracted_data:
-                    update_data["summary"] = extracted_data["summary"]
-                if "skills" in extracted_data and extracted_data["skills"]:
-                    # Transform skills to correct format
+                print(f"📝 [ONBOARDING] Processing AI-extracted data with {len(extracted_data)} fields")
+                print(f"🔎 [ONBOARDING] Extracted data keys: {list(extracted_data.keys())}")
+                
+                # DEBUG: Check skills specifically
+                if "skills" in extracted_data:
                     skills_data = extracted_data["skills"]
-                    transformed_skills = []
-                    
-                    # Ensure skills_data is iterable
-                    if not isinstance(skills_data, (list, tuple)):
-                        skills_data = [skills_data] if skills_data else []
-                    
-                    for skill_item in skills_data:
-                        if isinstance(skill_item, dict):
-                            skill_name = skill_item.get("skill", skill_item.get("name", ""))
-                            proficiency = skill_item.get("proficiency", "")
-                            
-                            # Map proficiency to level
-                            level = "Intermediate"  # default
-                            if "✔️" in proficiency or "expert" in proficiency.lower():
-                                level = "Advanced"
-                            elif "beginner" in proficiency.lower():
-                                level = "Beginner"
-                            elif "advanced" in proficiency.lower() or "senior" in proficiency.lower():
-                                level = "Expert"
-                            
-                            # Estimate years based on level
-                            years = 2  # default
-                            if level == "Beginner":
-                                years = 1
-                            elif level == "Intermediate":
-                                years = 3
-                            elif level == "Advanced":
-                                years = 5
-                            elif level == "Expert":
-                                years = 7
-                            
-                            if skill_name:
-                                transformed_skills.append({
-                                    "name": skill_name,
-                                    "level": level,
-                                    "years": years
-                                })
-                    
-                    update_data["skills"] = transformed_skills
-                if "experience_details" in extracted_data:
-                    update_data["experience_details"] = extracted_data["experience_details"]
-                if "projects" in extracted_data and extracted_data["projects"]:
-                    # Transform projects to correct format
-                    projects_data = extracted_data["projects"]
-                    transformed_projects = []
-                    
-                    # Ensure projects_data is iterable
-                    if not isinstance(projects_data, (list, tuple)):
-                        projects_data = [projects_data] if projects_data else []
-                    
-                    for project_item in projects_data:
-                        if isinstance(project_item, dict):
-                            project_name = project_item.get("name", project_item.get("title", "Untitled Project"))
-                            project_description = project_item.get("description", "No description provided")
-                            project_technologies = project_item.get("technologies", project_item.get("tech", []))
-                            
-                            # Ensure technologies is a list
-                            if isinstance(project_technologies, str):
-                                project_technologies = [tech.strip() for tech in project_technologies.split(",") if tech.strip()]
-                            elif not isinstance(project_technologies, list):
-                                project_technologies = []
-                            
-                            transformed_projects.append({
-                                "name": project_name,
-                                "description": project_description,
-                                "technologies": project_technologies
-                            })
-                        elif isinstance(project_item, str):
-                            # If project is just a string, create a basic project
-                            transformed_projects.append({
-                                "name": project_item,
-                                "description": "No description provided",
-                                "technologies": []
-                            })
-                    
-                    update_data["projects"] = transformed_projects
-                    
-                if "certifications" in extracted_data and extracted_data["certifications"]:
-                    # Transform certifications to correct format (list of strings)
-                    certifications_data = extracted_data["certifications"]
-                    transformed_certifications = []
-                    
-                    # Ensure certifications_data is iterable
-                    if not isinstance(certifications_data, (list, tuple)):
-                        certifications_data = [certifications_data] if certifications_data else []
-                    
-                    for cert_item in certifications_data:
-                        if isinstance(cert_item, dict):
-                            cert_name = cert_item.get("name", cert_item.get("title", cert_item.get("certification", "Unknown Certification")))
-                            transformed_certifications.append(cert_name)
-                        elif isinstance(cert_item, str):
-                            transformed_certifications.append(cert_item)
-                    
-                    update_data["certifications"] = transformed_certifications
+                    print(f"🎯 [ONBOARDING] SKILLS DEBUG - Type: {type(skills_data)}, Value: {skills_data}")
+                    if isinstance(skills_data, list):
+                        print(f"🎯 [ONBOARDING] SKILLS DEBUG - List length: {len(skills_data)}")
+                        if len(skills_data) > 0:
+                            print(f"🎯 [ONBOARDING] SKILLS DEBUG - First skill: {skills_data[0]}")
+                    else:
+                        print(f"🎯 [ONBOARDING] SKILLS DEBUG - Skills is not a list!")
+                else:
+                    print(f"❌ [ONBOARDING] SKILLS DEBUG - No 'skills' key in extracted_data!")
+                
+                # DEBUG: Check experience specifically
                 if "experience" in extracted_data:
-                    update_data["experience"] = extracted_data["experience"]
+                    experience_data = extracted_data["experience"]
+                    print(f"🎯 [ONBOARDING] EXPERIENCE DEBUG - Type: {type(experience_data)}, Value: '{experience_data}'")
+                else:
+                    print(f"❌ [ONBOARDING] EXPERIENCE DEBUG - No 'experience' key in extracted_data!")
+                    print(f"🔍 [ONBOARDING] EXPERIENCE DEBUG - Available keys: {list(extracted_data.keys())}")
+                
+                # The AI already provides data in the correct format - just map it directly
+                # Include all data regardless of QA status (user should not be blocked)
+                field_mapping = {
+                    "name": "name",
+                    "designation": "designation", 
+                    "location": "location",
+                    "summary": "summary",
+                    "profession": "profession",
+                    "experience": "experience",
+                    "skills": "skills",
+                    "experience_details": "experience_details",
+                    "projects": "projects",
+                    "certifications": "certifications",
+                    "contact_info": "contact_info",
+                    "education": "education",
+                    "languages": "languages",
+                    "awards": "awards",
+                    "publications": "publications",
+                    "volunteer_experience": "volunteer_experience",
+                    "interests": "interests"
+                }
+                
+                for ai_field, db_field in field_mapping.items():
+                    if ai_field in extracted_data and ai_field != "qa_verification":
+                        data_value = extracted_data[ai_field]
+                        # Include all data, even if partially empty (user can edit later)
+                        if data_value is not None:
+                            update_data[db_field] = data_value
+                            if ai_field == "skills":
+                                print(f"🎯 [ONBOARDING] SKILLS MAPPING - Added skills to update_data: {data_value}")
+                            elif ai_field == "experience":
+                                print(f"🎯 [ONBOARDING] EXPERIENCE MAPPING - Added experience to update_data: '{data_value}'")
+                            print(f"✅ [ONBOARDING] Mapped {ai_field}: {type(data_value).__name__}")
             else:
-                print("📝 [ONBOARDING] No data extracted from PDF, but marking step as completed")
+                print("📝 [ONBOARDING] No data extracted from document, but marking step as completed")
             
             # Update onboarding progress - PDF uploaded, user can continue or skip
-            # Profile is considered complete with PDF, but user can continue onboarding
             update_data["onboarding_progress"] = {
                 "step_1_pdf_upload": OnboardingStepStatus.COMPLETED,
                 "step_2_profile_info": current_user.onboarding_progress.step_2_profile_info,
@@ -217,34 +171,119 @@ async def step_1_pdf_upload(
             }
             
             print(f"🔄 [ONBOARDING] Creating user update with data: {list(update_data.keys())}")
-            user_update = UserUpdate(**update_data)
-            print(f"✅ [ONBOARDING] UserUpdate object created successfully")
+            
+            # DEBUG: Check skills before UserUpdate validation
+            if "skills" in update_data:
+                skills_data = update_data["skills"] 
+                print(f"🎯 [ONBOARDING] PRE-VALIDATION - Skills type: {type(skills_data)}")
+                print(f"🎯 [ONBOARDING] PRE-VALIDATION - Skills count: {len(skills_data) if isinstance(skills_data, list) else 'Not a list'}")
+                if isinstance(skills_data, list) and len(skills_data) > 0:
+                    print(f"🎯 [ONBOARDING] PRE-VALIDATION - First skill: {skills_data[0]}")
+            
+            # DEBUG: Check experience before UserUpdate validation  
+            if "experience" in update_data:
+                experience_data = update_data["experience"]
+                print(f"🎯 [ONBOARDING] PRE-VALIDATION - Experience: '{experience_data}' (type: {type(experience_data)})")
+            else:
+                print(f"❌ [ONBOARDING] PRE-VALIDATION - No experience key in update_data!")
+                # FINAL AGGRESSIVE FALLBACK - directly search the file content
+                if result.get('file_content'):
+                    print(f"🔧 [ONBOARDING] FINAL FALLBACK - Searching file content directly for experience...")
+                    import re
+                    file_text = result.get('file_content', '')
+                    experience_patterns = [
+                        r'Experience\s*[-–—:]\s*(\d+(?:\+|\.)?\d*)\s*years?',
+                        r'(\d+(?:\+|\.)?\d*)\s*years?\s*of\s*experience',
+                        r'(\d+(?:\+|\.)?\d*)\s*years?\s*experience',
+                        r'(\d+(?:\+|\.)?\d*)\+\s*years?',
+                    ]
+                    
+                    for i, pattern in enumerate(experience_patterns):
+                        match = re.search(pattern, file_text, re.IGNORECASE)
+                        if match:
+                            fallback_experience = f"{match.group(1)} years"
+                            print(f"🎯 [ONBOARDING] FINAL FALLBACK SUCCESS - Pattern {i+1} found: '{fallback_experience}'")
+                            update_data["experience"] = fallback_experience
+                            break
+                    else:
+                        print(f"❌ [ONBOARDING] FINAL FALLBACK - No experience patterns found in file content")
+                        # As absolute last resort, set a placeholder
+                        print(f"🔧 [ONBOARDING] FINAL FALLBACK - Setting experience to '0 years'")
+                        update_data["experience"] = "0 years"
+            
+            # ABSOLUTE FINAL CHECK - Ensure experience is NEVER null
+            if "experience" not in update_data or not update_data["experience"]:
+                print(f"🚨 [ONBOARDING] EMERGENCY FALLBACK - Experience still missing, forcing '0 years'")
+                update_data["experience"] = "0 years"
+            
+            try:
+                user_update = UserUpdate(**update_data)
+                print(f"✅ [ONBOARDING] UserUpdate object created successfully")
+                
+                # DEBUG: Check skills after UserUpdate validation
+                if hasattr(user_update, 'skills') and user_update.skills is not None:
+                    print(f"🎯 [ONBOARDING] POST-VALIDATION - Skills type: {type(user_update.skills)}")
+                    print(f"🎯 [ONBOARDING] POST-VALIDATION - Skills count: {len(user_update.skills)}")
+                    if len(user_update.skills) > 0:
+                        print(f"🎯 [ONBOARDING] POST-VALIDATION - First skill: {user_update.skills[0]}")
+                else:
+                    print(f"❌ [ONBOARDING] POST-VALIDATION - No skills in UserUpdate object!")
+                    
+            except Exception as validation_error:
+                print(f"❌ [ONBOARDING] UserUpdate validation failed: {str(validation_error)}")
+                print(f"❌ [ONBOARDING] Validation error type: {type(validation_error).__name__}")
+                raise validation_error
             
             print(f"💾 [ONBOARDING] Updating user {current_user.id} in database...")
             await user_service.update_user(str(current_user.id), user_update)
             print(f"✅ [ONBOARDING] User updated successfully")
             
-            return StepCompletionResponse(
-                success=True,
-                next_step=2,
-                message="PDF processed successfully! Your profile is now ready. You can continue adding details or skip to your profile.",
-                onboarding_completed=False  # Don't auto-complete, normal flow
-            )
+            # Determine response message based on QA results
+            confidence_score = qa_verification.get("confidence_score", 0)
+            qa_passed = qa_verification.get("passed", False)
+            retry_attempted = qa_verification.get("retry_attempted", False)
+            
+            if qa_passed:
+                if retry_attempted:
+                    message = "Document processed successfully! We were able to extract comprehensive information from your resume."
+                    user_message = "success_with_retry"
+                else:
+                    message = "Document processed successfully! Your profile is now complete with all extracted information."
+                    user_message = "success"
+            else:
+                # Still allow user to proceed but inform about potential review needed
+                message = "Document processed! Your profile has been created, though you may want to review and enhance some sections for completeness."
+                user_message = "success_with_review_needed"
+            
+            response_data = {
+                "success": True,
+                "next_step": 2,
+                "message": message,
+                "onboarding_completed": False,
+                "qa_info": {
+                    "confidence_score": confidence_score,
+                    "passed": qa_passed,
+                    "retry_attempted": retry_attempted,
+                    "user_message": user_message
+                }
+            }
+            
+            return response_data
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=result.get('error', 'PDF processing failed')
+                detail=result.get('error', 'Document processing failed')
             )
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ [ONBOARDING] Exception during PDF upload: {str(e)}")
+        print(f"❌ [ONBOARDING] Exception during document upload: {str(e)}")
         print(f"❌ [ONBOARDING] Exception type: {type(e).__name__}")
         print(f"❌ [ONBOARDING] Exception details: {repr(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing PDF: {str(e)}"
+            detail=f"Error processing document: {str(e)}"
         )
 
 @router.post("/step-2/profile-info", response_model=StepCompletionResponse)
@@ -535,19 +574,23 @@ async def resume_onboarding(
             detail=f"Error resuming onboarding: {str(e)}"
         )
 
-# Keep the old upload-pdf endpoint for backward compatibility
+# Legacy endpoint kept for backward compatibility
+
 @router.post("/upload-pdf")
 async def upload_linkedin_pdf(
     file: UploadFile = File(...),
     current_user = Depends(get_current_user)
 ):
-    """Upload and process LinkedIn PDF (Legacy endpoint - use /step-1/pdf-upload instead)"""
+    """Upload and process document (Legacy endpoint - use /step-1/document-upload instead)"""
     
-    # Validate file
-    if not file.filename.lower().endswith('.pdf'):
+    # Validate file format - support PDF, Word documents
+    supported_extensions = ['.pdf', '.docx', '.doc']
+    file_extension = '.' + file.filename.lower().split('.')[-1] if '.' in file.filename else ''
+    
+    if file_extension not in supported_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF files are allowed"
+            detail=f"Unsupported file format. Supported formats: {', '.join(supported_extensions)}"
         )
     
     if not file.size or file.size > settings.MAX_FILE_SIZE:
@@ -564,16 +607,16 @@ async def upload_linkedin_pdf(
         # Read file content
         file_content = await file.read()
         
-        # Save and process PDF
-        file_path = await pdf_service.save_uploaded_pdf(file_content, unique_filename)
-        result = await pdf_service.process_linkedin_pdf(file_path)
+        # Save and process document
+        file_path = await document_service.save_uploaded_document(file_content, unique_filename)
+        result = await document_service.process_resume_document(file_path, file.filename)
         
         return result
         
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing PDF: {str(e)}"
+            detail=f"Error processing document: {str(e)}"
         )
 
 # Legacy endpoint - marked for deprecation

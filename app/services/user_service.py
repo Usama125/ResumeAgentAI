@@ -46,9 +46,14 @@ class UserService:
         
         # Prepare update data - only include fields that are not None
         update_dict = {}
-        for key, value in update_data.dict(exclude_unset=True).items():
+        for key, value in update_data.model_dump(exclude_unset=True).items():
             if value is not None:
                 update_dict[key] = value
+                if key == "skills":
+                    print(f"🎯 [USER_SERVICE] SKILLS DEBUG - Adding to update_dict: {value}")
+                    print(f"🎯 [USER_SERVICE] SKILLS DEBUG - Type: {type(value)}, Length: {len(value) if isinstance(value, list) else 'Not a list'}")
+                elif key == "experience":
+                    print(f"🎯 [USER_SERVICE] EXPERIENCE DEBUG - Adding to update_dict: '{value}' (type: {type(value)})")
         
         # Always update the timestamp
         update_dict["updated_at"] = datetime.utcnow()
@@ -64,7 +69,13 @@ class UserService:
         )
         
         if result.matched_count:
-            return await self.get_user_by_id(user_id)
+            updated_user = await self.get_user_by_id(user_id)
+            if updated_user and "skills" in update_dict:
+                print(f"🎯 [USER_SERVICE] SKILLS DEBUG - After DB update, user skills: {updated_user.skills}")
+                print(f"🎯 [USER_SERVICE] SKILLS DEBUG - Skills length in DB: {len(updated_user.skills) if updated_user.skills else 0}")
+            if updated_user and "experience" in update_dict:
+                print(f"🎯 [USER_SERVICE] EXPERIENCE DEBUG - After DB update, user experience: '{updated_user.experience}'")
+            return updated_user
         return None
 
     async def search_users(self, 
