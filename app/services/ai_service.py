@@ -374,10 +374,12 @@ class AIService:
                 from app.routers.websocket import send_completion_update
                 qa_verification = result.get("qa_verification", {})
                 confidence_score = qa_verification.get("confidence_score", 0)
-                missing_sections = qa_verification.get("missing_sections", [])
+                
+                # Use the new function to determine truly missing sections based on actual data
+                truly_missing_sections = self._determine_truly_missing_sections(result)
                 
                 await send_progress_update(user_id, "completion", 100, "Processing complete!", f"Extraction finished with {confidence_score}% confidence")
-                await send_completion_update(user_id, True, confidence_score, missing_sections)
+                await send_completion_update(user_id, True, confidence_score, truly_missing_sections)
             
             return self._clean_extracted_data(result)
             
@@ -1364,6 +1366,72 @@ DO NOT return JSON. ONLY return the experience text."""
                 data[field] = [item for item in data[field] if item is not None]
         
         return data
+
+    def _determine_truly_missing_sections(self, user_data: Dict[str, Any]) -> List[str]:
+        """Determine sections that have no data at all (empty arrays, null, or empty strings)"""
+        missing_sections = []
+        
+        # Check personal info - if any of name, designation, location, summary are missing
+        if not user_data.get("name") or not user_data.get("designation") or not user_data.get("location"):
+            missing_sections.append("personal_info")
+        
+        # Check contact info - if fewer than 2 contact methods
+        contact_info = user_data.get("contact_info", {})
+        contact_fields = [v for v in contact_info.values() if v and v.strip()]
+        if len(contact_fields) < 2:
+            missing_sections.append("contact_info")
+        
+        # Check work experience - if no experience entries
+        experience_details = user_data.get("experience_details", [])
+        if not experience_details or len(experience_details) == 0:
+            missing_sections.append("work_experience")
+        
+        # Check skills - if fewer than 3 skills
+        skills = user_data.get("skills", [])
+        if not skills or len(skills) < 3:
+            missing_sections.append("skills")
+        
+        # Check education - if no education entries
+        education = user_data.get("education", [])
+        if not education or len(education) == 0:
+            missing_sections.append("education")
+        
+        # Check projects - if no projects
+        projects = user_data.get("projects", [])
+        if not projects or len(projects) == 0:
+            missing_sections.append("projects")
+        
+        # Check languages - if no languages
+        languages = user_data.get("languages", [])
+        if not languages or len(languages) == 0:
+            missing_sections.append("languages")
+        
+        # Check certifications - if no certifications
+        certifications = user_data.get("certifications", [])
+        if not certifications or len(certifications) == 0:
+            missing_sections.append("certifications")
+        
+        # Check awards - if no awards
+        awards = user_data.get("awards", [])
+        if not awards or len(awards) == 0:
+            missing_sections.append("awards")
+        
+        # Check publications - if no publications
+        publications = user_data.get("publications", [])
+        if not publications or len(publications) == 0:
+            missing_sections.append("publications")
+        
+        # Check volunteer experience - if no volunteer experience
+        volunteer_experience = user_data.get("volunteer_experience", [])
+        if not volunteer_experience or len(volunteer_experience) == 0:
+            missing_sections.append("volunteer_experience")
+        
+        # Check interests - if no interests
+        interests = user_data.get("interests", [])
+        if not interests or len(interests) == 0:
+            missing_sections.append("interests")
+        
+        return missing_sections
 
     # Keep the old method for backward compatibility
     async def process_linkedin_pdf_content(self, pdf_content: str) -> Dict[str, Any]:

@@ -197,6 +197,15 @@ class UserResponse(UserBase):
     onboarding_completed: bool
     onboarding_progress: OnboardingProgress
     created_at: datetime
+    # Enhanced fields
+    contact_info: Optional[ContactInfo] = None
+    education: List[Education] = []
+    languages: List[Language] = []
+    awards: List[Award] = []
+    publications: List[Publication] = []
+    volunteer_experience: List[VolunteerExperience] = []
+    interests: List[str] = []
+    profession: Optional[str] = None
 
 class PublicUserResponse(BaseModel):
     id: str
@@ -213,3 +222,15 @@ class PublicUserResponse(BaseModel):
     experience_details: List[Experience] = []
     projects: List[Project] = []
     certifications: List[str] = []
+    # Enhanced fields for public view
+    contact_info: Optional[ContactInfo] = None
+    education: List[Education] = []
+    languages: List[Language] = []
+    awards: List[Award] = []
+    publications: List[Publication] = []
+    volunteer_experience: List[VolunteerExperience] = []
+    interests: List[str] = []
+    profession: Optional[str] = None
+    # Additional fields that might be needed
+    expected_salary: Optional[str] = None
+    email: Optional[str] = None

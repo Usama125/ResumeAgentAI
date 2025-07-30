@@ -37,7 +37,18 @@ class UserService:
             skills=user.skills or [],
             experience_details=user.experience_details or [],
             projects=user.projects or [],
-            certifications=user.certifications or []
+            certifications=user.certifications or [],
+            # Enhanced fields
+            contact_info=user.contact_info,
+            education=user.education or [],
+            languages=user.languages or [],
+            awards=user.awards or [],
+            publications=user.publications or [],
+            volunteer_experience=user.volunteer_experience or [],
+            interests=user.interests or [],
+            profession=user.profession,
+            expected_salary=user.expected_salary,
+            email=user.email
         )
 
     async def update_user(self, user_id: str, update_data: UserUpdate) -> Optional[UserInDB]:
@@ -121,7 +132,18 @@ class UserService:
                 skills=user.get("skills") or [],
                 experience_details=user.get("experience_details") or [],
                 projects=user.get("projects") or [],
-                certifications=user.get("certifications") or []
+                certifications=user.get("certifications") or [],
+                # Enhanced fields
+                contact_info=user.get("contact_info"),
+                education=user.get("education") or [],
+                languages=user.get("languages") or [],
+                awards=user.get("awards") or [],
+                publications=user.get("publications") or [],
+                volunteer_experience=user.get("volunteer_experience") or [],
+                interests=user.get("interests") or [],
+                profession=user.get("profession"),
+                expected_salary=user.get("expected_salary"),
+                email=user.get("email")
             )
             for user in users
         ]
@@ -149,7 +171,18 @@ class UserService:
                 skills=user.get("skills") or [],
                 experience_details=user.get("experience_details") or [],
                 projects=user.get("projects") or [],
-                certifications=user.get("certifications") or []
+                certifications=user.get("certifications") or [],
+                # Enhanced fields
+                contact_info=user.get("contact_info"),
+                education=user.get("education") or [],
+                languages=user.get("languages") or [],
+                awards=user.get("awards") or [],
+                publications=user.get("publications") or [],
+                volunteer_experience=user.get("volunteer_experience") or [],
+                interests=user.get("interests") or [],
+                profession=user.get("profession"),
+                expected_salary=user.get("expected_salary"),
+                email=user.get("email")
             )
             for user in users
         ]
