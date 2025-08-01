@@ -8,6 +8,7 @@ class Skill(BaseModel):
     name: str
     level: Optional[str] = "Intermediate"  # Default level, no strict validation
     years: Optional[int] = Field(default=0, ge=0, le=50)  # Optional with default
+    id: Optional[str] = None  # Optional ID for drag and drop reordering
 
 class Experience(BaseModel):
     company: str
@@ -126,6 +127,7 @@ class UserBase(BaseModel):
     volunteer_experience: List[VolunteerExperience] = []
     interests: List[str] = []
     profession: Optional[str] = None  # Auto-detected from resume
+    section_order: List[str] = []  # Custom section ordering
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -157,6 +159,7 @@ class UserUpdate(BaseModel):
     volunteer_experience: Optional[List[VolunteerExperience]] = None
     interests: Optional[List[str]] = None
     profession: Optional[str] = None
+    section_order: Optional[List[str]] = None
 
 class UserInDB(UserBase):
     id: Optional[str] = Field(default=None, alias="_id")
@@ -184,6 +187,7 @@ class UserInDB(UserBase):
     volunteer_experience: List[VolunteerExperience] = Field(default_factory=list)
     interests: List[str] = Field(default_factory=list)
     profession: Optional[str] = None
+    section_order: List[str] = Field(default_factory=list)
 
     model_config = ConfigDict(
         populate_by_name=True,

@@ -53,6 +53,184 @@ async def update_current_user_profile(
     
     return UserResponse(**updated_user.dict())
 
+@router.put("/me/sections/{section_name}", response_model=UserResponse)
+async def update_profile_section(
+    section_name: str,
+    update_data: dict,
+    current_user = Depends(get_current_user)
+):
+    """Update a specific section of the user's profile"""
+    # Check if user has completed onboarding progress before allowing profile updates
+    onboarding_truly_completed = (
+        current_user.onboarding_completed or 
+        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
+    )
+    
+    if not onboarding_truly_completed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complete onboarding first before updating profile"
+        )
+    
+    # Validate section name and prepare update data
+    valid_sections = {
+        "about": ["summary"],
+        "experience": ["experience_details"],
+        "skills": ["skills"],
+        "projects": ["projects"],
+        "education": ["education"],
+        "contact": ["contact_info"],
+        "languages": ["languages"],
+        "awards": ["awards"],
+        "publications": ["publications"],
+        "volunteer": ["volunteer_experience"],
+        "interests": ["interests"]
+    }
+    
+    if section_name not in valid_sections:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid section name. Valid sections: {list(valid_sections.keys())}"
+        )
+    
+    # Create UserUpdate object with only the specified section
+    update_dict = {}
+    for field in valid_sections[section_name]:
+        if field in update_data:
+            update_dict[field] = update_data[field]
+    
+    if not update_dict:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid data provided for this section"
+        )
+    
+    # If onboarding progress shows completed but flag is False, fix it
+    if (current_user.onboarding_progress and 
+        current_user.onboarding_progress.completed and 
+        not current_user.onboarding_completed):
+        update_dict["onboarding_completed"] = True
+    
+    update_user_data = UserUpdate(**update_dict)
+    updated_user = await user_service.update_user(str(current_user.id), update_user_data)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update profile section"
+        )
+    
+    return UserResponse(**updated_user.dict())
+
+@router.put("/me/sections/reorder", response_model=UserResponse)
+async def reorder_sections(
+    section_order: List[str],
+    current_user = Depends(get_current_user)
+):
+    """Reorder profile sections based on provided section IDs order"""
+    # Check if user has completed onboarding progress before allowing profile updates
+    onboarding_truly_completed = (
+        current_user.onboarding_completed or 
+        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
+    )
+    
+    if not onboarding_truly_completed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complete onboarding first before updating profile"
+        )
+    
+    # Validate section IDs
+    valid_sections = [
+        "about", "contact", "experience", "skills", "education", 
+        "projects", "awards", "languages", "publications", "volunteer", "interests"
+    ]
+    
+    for section_id in section_order:
+        if section_id not in valid_sections:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid section ID: {section_id}. Valid sections: {valid_sections}"
+            )
+    
+    # If onboarding progress shows completed but flag is False, fix it
+    update_dict = {"section_order": section_order}
+    if (current_user.onboarding_progress and 
+        current_user.onboarding_progress.completed and 
+        not current_user.onboarding_completed):
+        update_dict["onboarding_completed"] = True
+    
+    update_user_data = UserUpdate(**update_dict)
+    updated_user = await user_service.update_user(str(current_user.id), update_user_data)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reorder sections"
+        )
+    
+    return UserResponse(**updated_user.dict())
+
+@router.put("/me/skills/reorder", response_model=UserResponse)
+async def reorder_skills(
+    skill_ids: List[str],
+    current_user = Depends(get_current_user)
+):
+    """Reorder skills based on provided skill IDs order"""
+    # Check if user has completed onboarding progress before allowing profile updates
+    onboarding_truly_completed = (
+        current_user.onboarding_completed or 
+        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
+    )
+    
+    if not onboarding_truly_completed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complete onboarding first before updating profile"
+        )
+    
+    if not current_user.skills:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No skills to reorder"
+        )
+    
+    # Create a map of skill IDs to skills for easy lookup
+    skills_map = {}
+    for i, skill in enumerate(current_user.skills):
+        skill_id = skill.id if skill.id else f"skill-{i}"
+        skills_map[skill_id] = skill
+    
+    # Reorder skills based on the provided skill IDs
+    reordered_skills = []
+    for skill_id in skill_ids:
+        if skill_id in skills_map:
+            reordered_skills.append(skills_map[skill_id])
+    
+    # Add any remaining skills that weren't in the skill_ids list
+    for i, skill in enumerate(current_user.skills):
+        skill_id = skill.id if skill.id else f"skill-{i}"
+        if skill_id not in skill_ids:
+            reordered_skills.append(skill)
+    
+    # If onboarding progress shows completed but flag is False, fix it
+    update_dict = {"skills": reordered_skills}
+    if (current_user.onboarding_progress and 
+        current_user.onboarding_progress.completed and 
+        not current_user.onboarding_completed):
+        update_dict["onboarding_completed"] = True
+    
+    update_user_data = UserUpdate(**update_dict)
+    updated_user = await user_service.update_user(str(current_user.id), update_user_data)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reorder skills"
+        )
+    
+    return UserResponse(**updated_user.dict())
+
 @router.get("/{user_id}", response_model=PublicUserResponse)
 async def get_user_profile(user_id: str):
     """Get public user profile"""
