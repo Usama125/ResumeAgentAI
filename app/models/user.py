@@ -238,3 +238,5 @@ class PublicUserResponse(BaseModel):
     # Additional fields that might be needed
     expected_salary: Optional[str] = None
     email: Optional[str] = None
+    # Section ordering for public profile display
+    section_order: List[str] = []
