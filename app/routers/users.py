@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File
 from typing import List
+from pydantic import BaseModel
 from app.models.user import UserResponse, UserUpdate, PublicUserResponse
 from app.services.user_service import UserService
 from app.services.auth_service import AuthService
@@ -7,6 +8,13 @@ from app.services.file_service import FileService
 from app.routers.auth import get_current_user
 from app.database import get_database
 from app.middleware.debug_rate_limiting import debug_rate_limit_job_matching
+
+# Request models for reordering
+class SectionOrderRequest(BaseModel):
+    section_order: List[str]
+
+class SkillOrderRequest(BaseModel):
+    skill_ids: List[str]
 
 router = APIRouter()
 user_service = UserService()
@@ -49,6 +57,56 @@ async def update_current_user_profile(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update profile"
+        )
+    
+    return UserResponse(**updated_user.dict())
+
+@router.put("/me/sections/reorder", response_model=UserResponse)
+async def reorder_sections(
+    request: SectionOrderRequest,
+    current_user = Depends(get_current_user)
+):
+    """Reorder profile sections based on provided section IDs order"""
+    # Check if user has completed onboarding progress before allowing profile updates
+    onboarding_truly_completed = (
+        current_user.onboarding_completed or 
+        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
+    )
+    
+    if not onboarding_truly_completed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Complete onboarding first before updating profile"
+        )
+    
+    # Validate section IDs
+    valid_sections = [
+        "about", "experience", "skills", "projects", "education", 
+        "contact", "languages", "awards", "publications", "volunteer", "interests"
+    ]
+    
+    # Validate that each provided section is valid (allow any order and any subset)
+    for section_id in request.section_order:
+        if section_id not in valid_sections:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid section name '{section_id}'. Valid sections: {valid_sections}"
+            )
+    
+    # If onboarding progress shows completed but flag is False, fix it
+    update_dict = {"section_order": request.section_order}
+    if (current_user.onboarding_progress and 
+        current_user.onboarding_progress.completed and 
+        not current_user.onboarding_completed):
+        update_dict["onboarding_completed"] = True
+    
+    update_user_data = UserUpdate(**update_dict)
+    updated_user = await user_service.update_user(str(current_user.id), update_user_data)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reorder sections"
         )
     
     return UserResponse(**updated_user.dict())
@@ -122,58 +180,9 @@ async def update_profile_section(
     
     return UserResponse(**updated_user.dict())
 
-@router.put("/me/sections/reorder", response_model=UserResponse)
-async def reorder_sections(
-    section_order: List[str],
-    current_user = Depends(get_current_user)
-):
-    """Reorder profile sections based on provided section IDs order"""
-    # Check if user has completed onboarding progress before allowing profile updates
-    onboarding_truly_completed = (
-        current_user.onboarding_completed or 
-        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
-    )
-    
-    if not onboarding_truly_completed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Complete onboarding first before updating profile"
-        )
-    
-    # Validate section IDs
-    valid_sections = [
-        "about", "contact", "experience", "skills", "education", 
-        "projects", "awards", "languages", "publications", "volunteer", "interests"
-    ]
-    
-    for section_id in section_order:
-        if section_id not in valid_sections:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid section ID: {section_id}. Valid sections: {valid_sections}"
-            )
-    
-    # If onboarding progress shows completed but flag is False, fix it
-    update_dict = {"section_order": section_order}
-    if (current_user.onboarding_progress and 
-        current_user.onboarding_progress.completed and 
-        not current_user.onboarding_completed):
-        update_dict["onboarding_completed"] = True
-    
-    update_user_data = UserUpdate(**update_dict)
-    updated_user = await user_service.update_user(str(current_user.id), update_user_data)
-    
-    if not updated_user:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to reorder sections"
-        )
-    
-    return UserResponse(**updated_user.dict())
-
 @router.put("/me/skills/reorder", response_model=UserResponse)
 async def reorder_skills(
-    skill_ids: List[str],
+    request: SkillOrderRequest,
     current_user = Depends(get_current_user)
 ):
     """Reorder skills based on provided skill IDs order"""
@@ -203,14 +212,14 @@ async def reorder_skills(
     
     # Reorder skills based on the provided skill IDs
     reordered_skills = []
-    for skill_id in skill_ids:
+    for skill_id in request.skill_ids:
         if skill_id in skills_map:
             reordered_skills.append(skills_map[skill_id])
     
     # Add any remaining skills that weren't in the skill_ids list
     for i, skill in enumerate(current_user.skills):
         skill_id = skill.id if skill.id else f"skill-{i}"
-        if skill_id not in skill_ids:
+        if skill_id not in request.skill_ids:
             reordered_skills.append(skill)
     
     # If onboarding progress shows completed but flag is False, fix it
