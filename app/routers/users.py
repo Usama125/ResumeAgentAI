@@ -32,25 +32,6 @@ async def update_current_user_profile(
     current_user = Depends(get_current_user)
 ):
     """Update current user's profile"""
-    # Check if user has completed onboarding progress before allowing profile updates
-    # Allow updates if all onboarding steps are completed OR if onboarding_completed flag is True
-    onboarding_truly_completed = (
-        current_user.onboarding_completed or 
-        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
-    )
-    
-    if not onboarding_truly_completed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Complete onboarding first before updating profile"
-        )
-    
-    # If onboarding progress shows completed but flag is False, fix it
-    if (current_user.onboarding_progress and 
-        current_user.onboarding_progress.completed and 
-        not current_user.onboarding_completed):
-        update_data.onboarding_completed = True
-    
     updated_user = await user_service.update_user(str(current_user.id), update_data)
     
     if not updated_user:
@@ -67,18 +48,6 @@ async def reorder_sections(
     current_user = Depends(get_current_user)
 ):
     """Reorder profile sections based on provided section IDs order"""
-    # Check if user has completed onboarding progress before allowing profile updates
-    onboarding_truly_completed = (
-        current_user.onboarding_completed or 
-        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
-    )
-    
-    if not onboarding_truly_completed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Complete onboarding first before updating profile"
-        )
-    
     # Validate section IDs
     valid_sections = [
         "about", "experience", "skills", "projects", "education", 
@@ -93,14 +62,7 @@ async def reorder_sections(
                 detail=f"Invalid section name '{section_id}'. Valid sections: {valid_sections}"
             )
     
-    # If onboarding progress shows completed but flag is False, fix it
-    update_dict = {"section_order": request.section_order}
-    if (current_user.onboarding_progress and 
-        current_user.onboarding_progress.completed and 
-        not current_user.onboarding_completed):
-        update_dict["onboarding_completed"] = True
-    
-    update_user_data = UserUpdate(**update_dict)
+    update_user_data = UserUpdate(section_order=request.section_order)
     updated_user = await user_service.update_user(str(current_user.id), update_user_data)
     
     if not updated_user:
@@ -118,18 +80,6 @@ async def update_profile_section(
     current_user = Depends(get_current_user)
 ):
     """Update a specific section of the user's profile"""
-    # Check if user has completed onboarding progress before allowing profile updates
-    onboarding_truly_completed = (
-        current_user.onboarding_completed or 
-        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
-    )
-    
-    if not onboarding_truly_completed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Complete onboarding first before updating profile"
-        )
-    
     # Validate section name and prepare update data
     valid_sections = {
         "about": ["summary"],
@@ -163,12 +113,6 @@ async def update_profile_section(
             detail="No valid data provided for this section"
         )
     
-    # If onboarding progress shows completed but flag is False, fix it
-    if (current_user.onboarding_progress and 
-        current_user.onboarding_progress.completed and 
-        not current_user.onboarding_completed):
-        update_dict["onboarding_completed"] = True
-    
     update_user_data = UserUpdate(**update_dict)
     updated_user = await user_service.update_user(str(current_user.id), update_user_data)
     
@@ -180,24 +124,53 @@ async def update_profile_section(
     
     return UserResponse(**updated_user.dict())
 
+@router.delete("/me/sections/{section_name}", response_model=UserResponse)
+async def delete_profile_section(
+    section_name: str,
+    current_user = Depends(get_current_user)
+):
+    """Delete a specific section of the user's profile by setting it to empty defaults"""
+    # Validate section name and define empty defaults
+    section_defaults = {
+        "about": {"summary": ""},
+        "skills": {"skills": []},
+        "experience": {"experience_details": []},
+        "projects": {"projects": []},
+        "education": {"education": []},
+        "contact": {"contact_info": {}},
+        "languages": {"languages": []},
+        "awards": {"awards": []},
+        "publications": {"publications": []},
+        "volunteer": {"volunteer_experience": []},
+        "interests": {"interests": []}
+    }
+    
+    if section_name not in section_defaults:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid section name. Valid sections: {list(section_defaults.keys())}"
+        )
+    
+    # Set section to empty default value
+    update_dict = section_defaults[section_name].copy()
+    
+    update_user_data = UserUpdate(**update_dict)
+    updated_user = await user_service.update_user(str(current_user.id), update_user_data)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete profile section"
+        )
+    
+    return UserResponse(**updated_user.dict())
+
 @router.put("/me/skills/reorder", response_model=UserResponse)
 async def reorder_skills(
     request: SkillOrderRequest,
     current_user = Depends(get_current_user)
 ):
     """Reorder skills based on provided skill IDs order"""
-    # Check if user has completed onboarding progress before allowing profile updates
-    onboarding_truly_completed = (
-        current_user.onboarding_completed or 
-        (current_user.onboarding_progress and current_user.onboarding_progress.completed)
-    )
-    
-    if not onboarding_truly_completed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Complete onboarding first before updating profile"
-        )
-    
     if not current_user.skills:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -222,14 +195,7 @@ async def reorder_skills(
         if skill_id not in request.skill_ids:
             reordered_skills.append(skill)
     
-    # If onboarding progress shows completed but flag is False, fix it
-    update_dict = {"skills": reordered_skills}
-    if (current_user.onboarding_progress and 
-        current_user.onboarding_progress.completed and 
-        not current_user.onboarding_completed):
-        update_dict["onboarding_completed"] = True
-    
-    update_user_data = UserUpdate(**update_dict)
+    update_user_data = UserUpdate(skills=reordered_skills)
     updated_user = await user_service.update_user(str(current_user.id), update_user_data)
     
     if not updated_user:
