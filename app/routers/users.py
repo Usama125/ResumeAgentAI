@@ -92,7 +92,8 @@ async def update_profile_section(
         "awards": ["awards"],
         "publications": ["publications"],
         "volunteer": ["volunteer_experience"],
-        "interests": ["interests"]
+        "interests": ["interests"],
+        "basic_info": ["name", "designation", "location", "experience"]
     }
     
     if section_name not in valid_sections:
