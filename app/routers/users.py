@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File, Response
+from fastapi.responses import StreamingResponse
 from typing import List
 from pydantic import BaseModel
 from app.models.user import UserResponse, UserUpdate, PublicUserResponse
@@ -8,6 +9,9 @@ from app.services.file_service import FileService
 from app.routers.auth import get_current_user
 from app.database import get_database
 from app.middleware.debug_rate_limiting import debug_rate_limit_job_matching
+from app.services.pdf_service import PDFService
+from app.database import get_database
+from io import BytesIO
 
 # Request models for reordering
 class SectionOrderRequest(BaseModel):
@@ -1344,3 +1348,112 @@ async def create_dummy_users(db = Depends(get_database)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create dummy users: {str(e)}"
         )
+
+@router.get("/me/download-profile")
+async def download_profile_pdf(
+    current_user = Depends(get_current_user)
+):
+    """Download current user's profile as PDF"""
+    try:
+        # Use current_user directly (same as other /me endpoints)
+        # Convert to the exact format expected by the frontend and PDF service
+        user_data = {
+            "name": current_user.name or "",
+            "email": current_user.email or "",
+            "designation": current_user.designation or "",
+            "location": current_user.location or "",
+            "about": current_user.summary or "",  # Use summary instead of about
+            "profile_picture": current_user.profile_picture or "",
+            "contact_info": current_user.contact_info.dict() if current_user.contact_info else {},
+            "experience": [
+                {
+                    "company": exp.company,
+                    "position": exp.position,
+                    "duration": exp.duration,
+                    "description": exp.description or "",
+                    "start_date": exp.start_date,
+                    "end_date": exp.end_date,
+                    "current": exp.current
+                } for exp in current_user.experience_details
+            ] if current_user.experience_details else [],
+            "education": [
+                {
+                    "institution": edu.institution,
+                    "degree": edu.degree,
+                    "field_of_study": edu.field_of_study,
+                    "start_date": edu.start_date,
+                    "end_date": edu.end_date,
+                    "grade": edu.grade,
+                    "activities": edu.activities,
+                    "description": edu.description
+                } for edu in current_user.education
+            ] if current_user.education else [],
+            "skills": [
+                {
+                    "name": skill.name,
+                    "level": skill.level,
+                    "years": skill.years,
+                    "id": skill.id
+                } for skill in current_user.skills
+            ] if current_user.skills else [],
+            "projects": [
+                {
+                    "name": project.name,
+                    "description": project.description,
+                    "technologies": project.technologies,
+                    "url": project.url,
+                    "github_url": project.github_url,
+                    "duration": project.duration
+                } for project in current_user.projects
+            ] if current_user.projects else [],
+            "languages": [
+                {
+                    "name": lang.name,
+                    "proficiency": lang.proficiency
+                } for lang in current_user.languages
+            ] if current_user.languages else [],
+            "certifications": current_user.certifications or [],
+            "awards": [
+                {
+                    "title": award.title,
+                    "issuer": award.issuer,
+                    "date": award.date,
+                    "description": award.description
+                } for award in current_user.awards
+            ] if current_user.awards else [],
+            "publications": [
+                {
+                    "title": pub.title,
+                    "publisher": pub.publisher,
+                    "date": pub.date,
+                    "url": pub.url,
+                    "description": pub.description
+                } for pub in current_user.publications
+            ] if current_user.publications else [],
+            "volunteer_experience": [
+                {
+                    "organization": vol.organization,
+                    "role": vol.role,
+                    "start_date": vol.start_date,
+                    "end_date": vol.end_date,
+                    "description": vol.description
+                } for vol in current_user.volunteer_experience
+            ] if current_user.volunteer_experience else [],
+            "interests": current_user.interests or []
+        }
+        
+        # Generate PDF
+        pdf_service = PDFService()
+        pdf_buffer = pdf_service.create_profile_pdf(user_data)
+        
+        # Return PDF as streaming response
+        return StreamingResponse(
+            BytesIO(pdf_buffer.getvalue()),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={user_data['name'].replace(' ', '_')}_profile.pdf"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating PDF: {str(e)}")
