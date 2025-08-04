@@ -104,6 +104,13 @@ class UserService:
         # Build search filter
         search_filter = {}
         
+        # Exclude users who haven't completed first step of onboarding
+        search_filter["$or"] = [
+            {"onboarding_progress.step_1_pdf_upload": {"$ne": "not_started"}},
+            {"onboarding_progress": {"$exists": False}},
+            {"onboarding_completed": True}
+        ]
+        
         if is_looking_for_job is not None:
             search_filter["is_looking_for_job"] = is_looking_for_job
         
@@ -154,7 +161,16 @@ class UserService:
         """Get featured users for homepage"""
         db = await get_database()
         
-        cursor = db.users.find({}).sort("rating", -1).skip(skip).limit(limit)
+        # Filter to exclude users who haven't completed first step of onboarding
+        filter_query = {
+            "$or": [
+                {"onboarding_progress.step_1_pdf_upload": {"$ne": "not_started"}},
+                {"onboarding_progress": {"$exists": False}},
+                {"onboarding_completed": True}
+            ]
+        }
+        
+        cursor = db.users.find(filter_query).sort("rating", -1).skip(skip).limit(limit)
         
         users = await cursor.to_list(length=limit)
         
