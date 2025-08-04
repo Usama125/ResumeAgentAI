@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File, Query
 from typing import List
 from pydantic import BaseModel
 from app.models.user import UserResponse, UserUpdate, PublicUserResponse
@@ -305,9 +305,9 @@ async def delete_profile_picture(current_user = Depends(get_current_user)):
         )
 
 @router.get("/", response_model=List[PublicUserResponse])
-async def get_featured_users(limit: int = 12, skip: int = 0):
+async def get_featured_users(limit: int = 12, skip: int = 0, listing_only: bool = Query(False, description="Return only essential fields for listing")):
     """Get featured users for homepage"""
-    users = await user_service.get_featured_users(limit, skip)
+    users = await user_service.get_featured_users(limit, skip, listing_only)
     return users
 
 @router.delete("/admin/clear-all")

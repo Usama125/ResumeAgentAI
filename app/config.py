@@ -3,7 +3,7 @@ from typing import List
 
 class Settings(BaseSettings):
     # Database
-    MONGODB_URL: str = "mongodb://localhost:27017"
+    MONGODB_URL: str = "mongodb+srv://Usama125:yabwj7sYtLD0FifC@cluster0.tfx2doy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     DATABASE_NAME: str = "ai_resume_builder"
     
     # JWT

@@ -222,21 +222,31 @@ class PublicUserResponse(BaseModel):
     experience: Optional[str] = ""
     rating: float = 4.5
     summary: Optional[str] = ""
-    skills: List[Skill] = []
-    experience_details: List[Experience] = []
-    projects: List[Project] = []
-    certifications: List[str] = []
+    skills: Optional[List[Skill]] = None
+    experience_details: Optional[List[Experience]] = None
+    projects: Optional[List[Project]] = None
+    certifications: Optional[List[str]] = None
     # Enhanced fields for public view
     contact_info: Optional[ContactInfo] = None
-    education: List[Education] = []
-    languages: List[Language] = []
-    awards: List[Award] = []
-    publications: List[Publication] = []
-    volunteer_experience: List[VolunteerExperience] = []
-    interests: List[str] = []
+    education: Optional[List[Education]] = None
+    languages: Optional[List[Language]] = None
+    awards: Optional[List[Award]] = None
+    publications: Optional[List[Publication]] = None
+    volunteer_experience: Optional[List[VolunteerExperience]] = None
+    interests: Optional[List[str]] = None
     profession: Optional[str] = None
     # Additional fields that might be needed
     expected_salary: Optional[str] = None
     email: Optional[str] = None
     # Section ordering for public profile display
-    section_order: List[str] = []
+    section_order: Optional[List[str]] = None
+
+class UserListingResponse(BaseModel):
+    """Lightweight response model for user listing - only essential fields"""
+    id: str
+    name: str
+    profession: Optional[str] = None
+    location: Optional[str] = ""
+    profile_picture: Optional[str] = None
+    is_looking_for_job: bool = False
+    rating: float = 4.5

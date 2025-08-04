@@ -97,11 +97,11 @@ class UserService:
                           location: Optional[str] = None,
                           is_looking_for_job: Optional[bool] = None,
                           limit: int = 20,
-                          skip: int = 0) -> List[PublicUserResponse]:
+                          skip: int = 0,
+                          listing_only: bool = False) -> List[PublicUserResponse]:
         """Search users with filters"""
         db = await get_database()
         
-        # Build search filter
         search_filter = {}
         
         # Exclude users who haven't completed first step of onboarding
@@ -123,7 +123,22 @@ class UserService:
         if query:
             search_filter["$text"] = {"$search": query}
         
-        cursor = db.users.find(search_filter).skip(skip).limit(limit)
+        # Define projection based on listing_only flag
+        if listing_only:
+            projection = {
+                "_id": 1,
+                "name": 1,
+                "username": 1,
+                "profession": 1,
+                "location": 1,
+                "profile_picture": 1,
+                "is_looking_for_job": 1,
+                "rating": 1
+            }
+        else:
+            projection = None
+        
+        cursor = db.users.find(search_filter, projection).skip(skip).limit(limit)
         users = await cursor.to_list(length=limit)
         
         return [
@@ -131,33 +146,34 @@ class UserService:
                 id=str(user["_id"]),
                 name=user["name"],
                 username=user.get("username"),
-                designation=user.get("designation") or "",
+                designation=user.get("designation") or "" if not listing_only else None,
                 location=user.get("location") or "",
                 profile_picture=user.get("profile_picture"),
                 is_looking_for_job=user.get("is_looking_for_job", False),
-                experience=user.get("experience") or "",
+                experience=user.get("experience") or "" if not listing_only else None,
                 rating=user.get("rating", 4.5),
-                summary=user.get("summary") or "",
-                skills=user.get("skills") or [],
-                experience_details=user.get("experience_details") or [],
-                projects=user.get("projects") or [],
-                certifications=user.get("certifications") or [],
+                summary=user.get("summary") or "" if not listing_only else None,
+                skills=user.get("skills") or [] if not listing_only else None,
+                experience_details=user.get("experience_details") or [] if not listing_only else None,
+                projects=user.get("projects") or [] if not listing_only else None,
+                certifications=user.get("certifications") or [] if not listing_only else None,
                 # Enhanced fields
-                contact_info=user.get("contact_info"),
-                education=user.get("education") or [],
-                languages=user.get("languages") or [],
-                awards=user.get("awards") or [],
-                publications=user.get("publications") or [],
-                volunteer_experience=user.get("volunteer_experience") or [],
-                interests=user.get("interests") or [],
+                contact_info=user.get("contact_info") if not listing_only else None,
+                education=user.get("education") or [] if not listing_only else None,
+                languages=user.get("languages") or [] if not listing_only else None,
+                awards=user.get("awards") or [] if not listing_only else None,
+                publications=user.get("publications") or [] if not listing_only else None,
+                volunteer_experience=user.get("volunteer_experience") or [] if not listing_only else None,
+                interests=user.get("interests") or [] if not listing_only else None,
                 profession=user.get("profession"),
-                expected_salary=user.get("expected_salary"),
-                email=user.get("email")
+                expected_salary=user.get("expected_salary") if not listing_only else None,
+                email=user.get("email") if not listing_only else None,
+                section_order=user.get("section_order") or [] if not listing_only else None
             )
             for user in users
         ]
 
-    async def get_featured_users(self, limit: int = 12, skip: int = 0) -> List[PublicUserResponse]:
+    async def get_featured_users(self, limit: int = 12, skip: int = 0, listing_only: bool = False) -> List[PublicUserResponse]:
         """Get featured users for homepage"""
         db = await get_database()
         
@@ -170,7 +186,22 @@ class UserService:
             ]
         }
         
-        cursor = db.users.find(filter_query).sort("rating", -1).skip(skip).limit(limit)
+        # Define projection based on listing_only flag
+        if listing_only:
+            projection = {
+                "_id": 1,
+                "name": 1,
+                "username": 1,
+                "profession": 1,
+                "location": 1,
+                "profile_picture": 1,
+                "is_looking_for_job": 1,
+                "rating": 1
+            }
+        else:
+            projection = None
+        
+        cursor = db.users.find(filter_query, projection).sort("rating", -1).skip(skip).limit(limit)
         
         users = await cursor.to_list(length=limit)
         
@@ -179,28 +210,29 @@ class UserService:
                 id=str(user["_id"]),
                 name=user["name"],
                 username=user.get("username"),
-                designation=user.get("designation") or "",
+                designation=user.get("designation") or "" if not listing_only else None,
                 location=user.get("location") or "",
                 profile_picture=user.get("profile_picture"),
                 is_looking_for_job=user.get("is_looking_for_job", False),
-                experience=user.get("experience") or "",
+                experience=user.get("experience") or "" if not listing_only else None,
                 rating=user.get("rating", 4.5),
-                summary=user.get("summary") or "",
-                skills=user.get("skills") or [],
-                experience_details=user.get("experience_details") or [],
-                projects=user.get("projects") or [],
-                certifications=user.get("certifications") or [],
+                summary=user.get("summary") or "" if not listing_only else None,
+                skills=user.get("skills") or [] if not listing_only else None,
+                experience_details=user.get("experience_details") or [] if not listing_only else None,
+                projects=user.get("projects") or [] if not listing_only else None,
+                certifications=user.get("certifications") or [] if not listing_only else None,
                 # Enhanced fields
-                contact_info=user.get("contact_info"),
-                education=user.get("education") or [],
-                languages=user.get("languages") or [],
-                awards=user.get("awards") or [],
-                publications=user.get("publications") or [],
-                volunteer_experience=user.get("volunteer_experience") or [],
-                interests=user.get("interests") or [],
+                contact_info=user.get("contact_info") if not listing_only else None,
+                education=user.get("education") or [] if not listing_only else None,
+                languages=user.get("languages") or [] if not listing_only else None,
+                awards=user.get("awards") or [] if not listing_only else None,
+                publications=user.get("publications") or [] if not listing_only else None,
+                volunteer_experience=user.get("volunteer_experience") or [] if not listing_only else None,
+                interests=user.get("interests") or [] if not listing_only else None,
                 profession=user.get("profession"),
-                expected_salary=user.get("expected_salary"),
-                email=user.get("email")
+                expected_salary=user.get("expected_salary") if not listing_only else None,
+                email=user.get("email") if not listing_only else None,
+                section_order=user.get("section_order") or [] if not listing_only else None
             )
             for user in users
         ]

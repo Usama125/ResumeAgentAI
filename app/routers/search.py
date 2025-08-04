@@ -16,7 +16,8 @@ async def search_users(
     location: Optional[str] = Query(None, description="Location filter"),
     looking_for_job: Optional[bool] = Query(None, description="Job seeking status"),
     limit: int = Query(20, ge=1, le=100, description="Number of results"),
-    skip: int = Query(0, ge=0, description="Number of results to skip")
+    skip: int = Query(0, ge=0, description="Number of results to skip"),
+    listing_only: bool = Query(False, description="Return only essential fields for listing")
 ):
     """Search users with filters"""
     
@@ -31,7 +32,8 @@ async def search_users(
         location=location,
         is_looking_for_job=looking_for_job,
         limit=limit,
-        skip=skip
+        skip=skip,
+        listing_only=listing_only
     )
     
     return users

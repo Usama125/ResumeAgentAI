@@ -10,7 +10,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
 from ..database import get_database
-from ..utils.security import verify_api_key
+from ..utils.api_key_auth import verify_api_key
 import sys
 import os
 
