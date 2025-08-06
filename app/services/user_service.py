@@ -121,7 +121,28 @@ class UserService:
             search_filter["skills.name"] = {"$in": skills}
         
         if query:
-            search_filter["$text"] = {"$search": query}
+            # Enhanced search: case insensitive partial matching for name, email, username
+            search_terms = [term.strip() for term in query.split() if term.strip()]
+            
+            if search_terms:
+                # Create regex patterns for each search term
+                term_queries = []
+                for term in search_terms:
+                    escaped_term = term.replace('\\', '\\\\').replace('.', '\\.')
+                    term_regex = {"$regex": escaped_term, "$options": "i"}
+                    
+                    # Search in name (split by spaces), email, username, designation
+                    term_queries.append({
+                        "$or": [
+                            {"name": term_regex},
+                            {"email": term_regex},
+                            {"username": term_regex},
+                            {"designation": term_regex}
+                        ]
+                    })
+                
+                # All terms must match at least one field
+                search_filter["$and"] = term_queries
         
         # Define projection based on listing_only flag
         if listing_only:
@@ -129,11 +150,14 @@ class UserService:
                 "_id": 1,
                 "name": 1,
                 "username": 1,
+                "designation": 1,
                 "profession": 1,
                 "location": 1,
                 "profile_picture": 1,
                 "is_looking_for_job": 1,
-                "rating": 1
+                "rating": 1,
+                "email": 1,
+                "skills": 1
             }
         else:
             projection = None
@@ -146,14 +170,14 @@ class UserService:
                 id=str(user["_id"]),
                 name=user["name"],
                 username=user.get("username"),
-                designation=user.get("designation") or "" if not listing_only else None,
+                designation=user.get("designation") or "",
                 location=user.get("location") or "",
                 profile_picture=user.get("profile_picture"),
                 is_looking_for_job=user.get("is_looking_for_job", False),
                 experience=user.get("experience") or "" if not listing_only else None,
                 rating=user.get("rating", 4.5),
                 summary=user.get("summary") or "" if not listing_only else None,
-                skills=user.get("skills") or [] if not listing_only else None,
+                skills=user.get("skills") or [],
                 experience_details=user.get("experience_details") or [] if not listing_only else None,
                 projects=user.get("projects") or [] if not listing_only else None,
                 certifications=user.get("certifications") or [] if not listing_only else None,
@@ -167,7 +191,7 @@ class UserService:
                 interests=user.get("interests") or [] if not listing_only else None,
                 profession=user.get("profession"),
                 expected_salary=user.get("expected_salary") if not listing_only else None,
-                email=user.get("email") if not listing_only else None,
+                email=user.get("email"),
                 section_order=user.get("section_order") or [] if not listing_only else None
             )
             for user in users
@@ -192,11 +216,14 @@ class UserService:
                 "_id": 1,
                 "name": 1,
                 "username": 1,
+                "designation": 1,
                 "profession": 1,
                 "location": 1,
                 "profile_picture": 1,
                 "is_looking_for_job": 1,
-                "rating": 1
+                "rating": 1,
+                "email": 1,
+                "skills": 1
             }
         else:
             projection = None
@@ -210,14 +237,14 @@ class UserService:
                 id=str(user["_id"]),
                 name=user["name"],
                 username=user.get("username"),
-                designation=user.get("designation") or "" if not listing_only else None,
+                designation=user.get("designation") or "",
                 location=user.get("location") or "",
                 profile_picture=user.get("profile_picture"),
                 is_looking_for_job=user.get("is_looking_for_job", False),
                 experience=user.get("experience") or "" if not listing_only else None,
                 rating=user.get("rating", 4.5),
                 summary=user.get("summary") or "" if not listing_only else None,
-                skills=user.get("skills") or [] if not listing_only else None,
+                skills=user.get("skills") or [],
                 experience_details=user.get("experience_details") or [] if not listing_only else None,
                 projects=user.get("projects") or [] if not listing_only else None,
                 certifications=user.get("certifications") or [] if not listing_only else None,
@@ -231,7 +258,7 @@ class UserService:
                 interests=user.get("interests") or [] if not listing_only else None,
                 profession=user.get("profession"),
                 expected_salary=user.get("expected_salary") if not listing_only else None,
-                email=user.get("email") if not listing_only else None,
+                email=user.get("email"),
                 section_order=user.get("section_order") or [] if not listing_only else None
             )
             for user in users
