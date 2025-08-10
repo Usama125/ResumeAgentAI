@@ -466,6 +466,21 @@ async def step_4_salary_availability(
         user_update = UserUpdate(**update_data)
         updated_user = await user_service.update_user(str(current_user.id), user_update)
         
+        # Ensure Algolia sync on onboarding completion
+        if updated_user:
+            print(f"🔄 [ONBOARDING] Syncing completed profile to Algolia for user {current_user.id}")
+            try:
+                # Import here to avoid circular import
+                from app.services.algolia_service import AlgoliaService
+                algolia_service = AlgoliaService()
+                sync_success = await algolia_service.sync_user_to_algolia(updated_user)
+                if sync_success:
+                    print(f"✅ [ONBOARDING] Profile synced to Algolia successfully")
+                else:
+                    print(f"❌ [ONBOARDING] Profile sync to Algolia failed")
+            except Exception as e:
+                print(f"⚠️ [ONBOARDING] Algolia sync error: {str(e)}")
+        
         return StepCompletionResponse(
             success=True,
             next_step=None,
@@ -507,7 +522,22 @@ async def skip_to_profile(
         }
         
         user_update = UserUpdate(**update_data)
-        await user_service.update_user(str(current_user.id), user_update)
+        updated_user = await user_service.update_user(str(current_user.id), user_update)
+        
+        # Ensure Algolia sync when skipping to profile
+        if updated_user:
+            print(f"🔄 [ONBOARDING] Syncing skipped profile to Algolia for user {current_user.id}")
+            try:
+                # Import here to avoid circular import
+                from app.services.algolia_service import AlgoliaService
+                algolia_service = AlgoliaService()
+                sync_success = await algolia_service.sync_user_to_algolia(updated_user)
+                if sync_success:
+                    print(f"✅ [ONBOARDING] Profile synced to Algolia successfully")
+                else:
+                    print(f"❌ [ONBOARDING] Profile sync to Algolia failed")
+            except Exception as e:
+                print(f"⚠️ [ONBOARDING] Algolia sync error: {str(e)}")
         
         return StepCompletionResponse(
             success=True,
@@ -711,6 +741,20 @@ async def complete_onboarding(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to complete onboarding"
             )
+        
+        # Ensure Algolia sync on legacy onboarding completion
+        print(f"🔄 [ONBOARDING] Syncing legacy completed profile to Algolia for user {current_user.id}")
+        try:
+            # Import here to avoid circular import
+            from app.services.algolia_service import AlgoliaService
+            algolia_service = AlgoliaService()
+            sync_success = await algolia_service.sync_user_to_algolia(updated_user)
+            if sync_success:
+                print(f"✅ [ONBOARDING] Profile synced to Algolia successfully")
+            else:
+                print(f"❌ [ONBOARDING] Profile sync to Algolia failed")
+        except Exception as e:
+            print(f"⚠️ [ONBOARDING] Algolia sync error: {str(e)}")
         
         return {
             "success": True,

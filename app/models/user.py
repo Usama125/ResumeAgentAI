@@ -128,6 +128,7 @@ class UserBase(BaseModel):
     interests: List[str] = []
     profession: Optional[str] = None  # Auto-detected from resume
     section_order: List[str] = []  # Custom section ordering
+    profile_score: int = 0  # Profile completeness and quality score (0-100)
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -160,6 +161,7 @@ class UserUpdate(BaseModel):
     interests: Optional[List[str]] = None
     profession: Optional[str] = None
     section_order: Optional[List[str]] = None
+    profile_score: Optional[int] = None
 
 class UserInDB(UserBase):
     id: Optional[str] = Field(default=None, alias="_id")
@@ -188,6 +190,7 @@ class UserInDB(UserBase):
     interests: List[str] = Field(default_factory=list)
     profession: Optional[str] = None
     section_order: List[str] = Field(default_factory=list)
+    profile_score: int = 0  # Profile completeness and quality score (0-100)
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -210,6 +213,7 @@ class UserResponse(UserBase):
     volunteer_experience: List[VolunteerExperience] = []
     interests: List[str] = []
     profession: Optional[str] = None
+    profile_score: int = 0
 
 class PublicUserResponse(BaseModel):
     id: str
@@ -240,6 +244,7 @@ class PublicUserResponse(BaseModel):
     email: Optional[str] = None
     # Section ordering for public profile display
     section_order: Optional[List[str]] = None
+    profile_score: int = 0
 
 class UserListingResponse(BaseModel):
     """Lightweight response model for user listing - only essential fields"""
@@ -250,3 +255,4 @@ class UserListingResponse(BaseModel):
     profile_picture: Optional[str] = None
     is_looking_for_job: bool = False
     rating: float = 4.5
+    profile_score: int = 0

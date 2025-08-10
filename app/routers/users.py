@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File, Query
-from typing import List
+from typing import List, Dict, Any
 from pydantic import BaseModel
 from app.models.user import UserResponse, UserUpdate, PublicUserResponse
 from app.services.user_service import UserService
@@ -1344,3 +1344,38 @@ async def create_dummy_users(db = Depends(get_database)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create dummy users: {str(e)}"
         )
+
+# AI Analysis endpoints
+@router.get("/me/ai-analysis", response_model=Dict[str, Any])
+@debug_rate_limit_job_matching()
+async def get_current_user_ai_analysis(
+    request: Request,
+    current_user = Depends(get_current_user)
+):
+    """Get AI analysis of current user's profile (strengths and weaknesses)"""
+    analysis = await user_service.get_profile_analysis(str(current_user.id))
+    
+    if not analysis:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found"
+        )
+    
+    return analysis
+
+@router.get("/{user_id}/ai-analysis", response_model=Dict[str, Any])
+@debug_rate_limit_job_matching()
+async def get_user_ai_analysis(
+    user_id: str,
+    request: Request
+):
+    """Get AI analysis of any user's profile (public endpoint)"""
+    analysis = await user_service.get_profile_analysis(user_id)
+    
+    if not analysis:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found"
+        )
+    
+    return analysis

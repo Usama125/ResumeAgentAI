@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     AWS_REGION: str = ""
     AWS_S3_BUCKET_NAME: str = ""
     
+    # Algolia Configuration
+    ALGOLIA_APPLICATION_ID: str = "NIQXR0065F"
+    ALGOLIA_API_KEY: str = "565d9aca1108bd03da1acff52209f4c3"
+    ALGOLIA_SEARCH_KEY: str = "35e6909c47fc60a52be842d593de7967"
+    ALGOLIA_INDEX_NAME: str = "users"
+    
     # CORS - Strict Origin Control
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",

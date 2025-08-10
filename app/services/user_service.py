@@ -2,9 +2,15 @@ from typing import List, Optional, Dict, Any
 from bson import ObjectId
 from app.database import get_database
 from app.models.user import UserInDB, UserUpdate, PublicUserResponse
+from app.services.profile_scoring_service import ProfileScoringService
+from app.services.algolia_service import AlgoliaService
 from datetime import datetime
 
 class UserService:
+    def __init__(self):
+        self.profile_scoring_service = ProfileScoringService()
+        self.algolia_service = AlgoliaService()
+    
     async def get_user_by_id(self, user_id: str) -> Optional[UserInDB]:
         """Get user by ID"""
         try:
@@ -83,6 +89,33 @@ class UserService:
         
         if result.matched_count:
             updated_user = await self.get_user_by_id(user_id)
+            
+            # Calculate and update profile score after any profile update
+            if updated_user:
+                profile_score = self.profile_scoring_service.calculate_profile_score(updated_user)
+                
+                # Update profile score in database if it has changed
+                if profile_score != getattr(updated_user, 'profile_score', 0):
+                    await db.users.update_one(
+                        {"_id": ObjectId(user_id)},
+                        {"$set": {"profile_score": profile_score}}
+                    )
+                    # Refresh user data to get the updated score
+                    updated_user = await self.get_user_by_id(user_id)
+                
+                # Sync to Algolia after profile update (async, don't block user)
+                try:
+                    print(f"🔄 [USER_SERVICE] Starting Algolia sync for user {user_id}")
+                    sync_success = await self.algolia_service.sync_user_to_algolia(updated_user)
+                    if sync_success:
+                        print(f"✅ [USER_SERVICE] Algolia sync completed successfully for user {user_id}")
+                    else:
+                        print(f"❌ [USER_SERVICE] Algolia sync failed for user {user_id}")
+                except Exception as algolia_error:
+                    print(f"⚠️ [USER_SERVICE] Algolia sync exception for user {user_id}: {str(algolia_error)}")
+                    import traceback
+                    traceback.print_exc()
+            
             if updated_user and "skills" in update_dict:
                 print(f"🎯 [USER_SERVICE] SKILLS DEBUG - After DB update, user skills: {updated_user.skills}")
                 print(f"🎯 [USER_SERVICE] SKILLS DEBUG - Skills length in DB: {len(updated_user.skills) if updated_user.skills else 0}")
@@ -90,6 +123,13 @@ class UserService:
                 print(f"🎯 [USER_SERVICE] EXPERIENCE DEBUG - After DB update, user experience: '{updated_user.experience}'")
             return updated_user
         return None
+    
+    async def get_profile_analysis(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get detailed profile analysis with strengths and weaknesses"""
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
+        return self.profile_scoring_service.get_profile_analysis(user)
 
     async def search_users(self, 
                           query: Optional[str] = None,
