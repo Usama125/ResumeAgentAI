@@ -1522,3 +1522,106 @@ DO NOT return JSON. ONLY return the experience text."""
         
         # Return up to 6 suggestions
         return base_suggestions[:6]
+
+    async def analyze_professional_fit(self, user_profile: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze professional suitability and fit for the candidate's profession.
+        Provides brief, targeted analysis for employers and recruiters.
+        """
+        try:
+            # Extract key profile information
+            name = user_profile.get('name', 'Unknown')
+            designation = user_profile.get('designation', '')
+            profession = user_profile.get('profession', '')
+            skills = user_profile.get('skills', [])
+            experience_details = user_profile.get('experience_details', [])
+            projects = user_profile.get('projects', [])
+            education = user_profile.get('education', [])
+            summary = user_profile.get('summary', '')
+            
+            # Determine the profession to analyze
+            target_profession = profession or designation or 'professional'
+            
+            # Create a comprehensive prompt for professional analysis
+            analysis_prompt = f"""
+            You are an expert HR recruiter and career analyst. Analyze this candidate's professional profile and provide a brief, targeted assessment for employers and recruiters.
+
+            CANDIDATE PROFILE:
+            Name: {name}
+            Current Role: {designation}
+            Profession: {target_profession}
+            
+            Summary: {summary}
+            
+            Skills: {[skill.get('name', '') for skill in skills]}
+            
+            Experience: {len(experience_details)} positions
+            {chr(10).join([f"- {exp.get('position', '')} at {exp.get('company', '')} ({exp.get('duration', '')})" for exp in experience_details[:3]])}
+            
+            Projects: {len(projects)} projects
+            {chr(10).join([f"- {proj.get('name', '')}: {proj.get('description', '')[:100]}..." for proj in projects[:2]])}
+            
+            Education: {[edu.get('degree', '') for edu in education]}
+
+            ANALYSIS REQUIREMENTS:
+            1. Provide a brief professional assessment (2-3 sentences)
+            2. List 3-4 key strengths relevant to their profession
+            3. List 2-3 areas for improvement or concerns
+            4. Give a professional fit score (1-10) with brief reasoning
+            5. Provide hiring recommendation (Strong Yes/Yes/Maybe/No) with brief explanation
+
+            Focus on:
+            - Professional competence and expertise
+            - Industry relevance and experience
+            - Skill alignment with their profession
+            - Career progression and growth potential
+            - Red flags or concerns for employers
+
+            Respond in JSON format:
+            {{
+                "professional_assessment": "Brief 2-3 sentence assessment",
+                "key_strengths": ["strength1", "strength2", "strength3"],
+                "areas_for_improvement": ["area1", "area2"],
+                "professional_fit_score": 8,
+                "fit_score_reasoning": "Brief explanation of the score",
+                "hiring_recommendation": "Strong Yes/Yes/Maybe/No",
+                "recommendation_reasoning": "Brief explanation of recommendation"
+            }}
+            """
+
+            # Get AI response
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are an expert HR recruiter and career analyst. Provide professional, objective assessments for employers and recruiters."},
+                    {"role": "user", "content": analysis_prompt}
+                ],
+                temperature=0.3,
+                max_tokens=800
+            )
+
+            # Parse the response
+            response_content = response.choices[0].message.content
+            analysis_result = self._parse_json_response(response_content, {
+                "professional_assessment": "Professional analysis not available",
+                "key_strengths": [],
+                "areas_for_improvement": [],
+                "professional_fit_score": 5,
+                "fit_score_reasoning": "Analysis incomplete",
+                "hiring_recommendation": "Maybe",
+                "recommendation_reasoning": "Insufficient data for complete assessment"
+            })
+
+            return analysis_result
+
+        except Exception as e:
+            logger.error(f"Error in professional fit analysis: {str(e)}")
+            return {
+                "professional_assessment": "Unable to complete professional analysis at this time.",
+                "key_strengths": ["Analysis temporarily unavailable"],
+                "areas_for_improvement": ["Analysis temporarily unavailable"],
+                "professional_fit_score": 5,
+                "fit_score_reasoning": "Analysis could not be completed",
+                "hiring_recommendation": "Maybe",
+                "recommendation_reasoning": "Technical issues prevented complete assessment"
+            }

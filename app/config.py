@@ -21,11 +21,11 @@ class Settings(BaseSettings):
     ALLOWED_FILE_TYPES: List[str] = ["pdf", "jpg", "jpeg", "png"]
     
     # Rate Limiting - Unauthenticated Users
-    UNAUTH_DAILY_JOB_MATCHING_LIMIT: int = 3
+    UNAUTH_DAILY_JOB_MATCHING_LIMIT: int = 3000
     UNAUTH_DAILY_CHAT_LIMIT: int = 10
     
     # Rate Limiting - Authenticated Users
-    AUTH_DAILY_JOB_MATCHING_LIMIT: int = 5
+    AUTH_DAILY_JOB_MATCHING_LIMIT: int = 3000
     AUTH_DAILY_CHAT_LIMIT: int = 15
     
     # Rate Limiting - Reset Time Configuration

@@ -131,6 +131,23 @@ class UserService:
             return None
         return self.profile_scoring_service.get_profile_analysis(user)
 
+    async def get_professional_analysis(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get professional fit analysis for employers and recruiters"""
+        try:
+            user = await self.get_user_by_id(user_id)
+            if not user:
+                return None
+            
+            # Get professional analysis from AI service
+            from app.services.ai_service import AIService
+            ai_service = AIService()
+            analysis = await ai_service.analyze_professional_fit(user.dict())
+            return analysis
+            
+        except Exception as e:
+            print(f"Error in get_professional_analysis: {str(e)}")
+            return None
+
     async def search_users(self, 
                           query: Optional[str] = None,
                           skills: Optional[List[str]] = None,

@@ -60,10 +60,10 @@ def debug_rate_limit_job_matching():
                 # Use user_id for authenticated users, IP+UA for anonymous
                 if is_authenticated:
                     client_key = f"user:{user_id}"
-                    limit = 5  # Authenticated job matching limit
+                    limit = 3000  # Authenticated job matching limit
                 else:
                     client_key = f"{ip_address}:{user_agent}"
-                    limit = 3  # Unauthenticated limit
+                    limit = 3000  # Unauthenticated limit
                 
                 now = datetime.datetime.now()
                 

@@ -1379,3 +1379,31 @@ async def get_user_ai_analysis(
         )
     
     return analysis
+
+@router.get("/{user_id}/professional-analysis", response_model=Dict[str, Any])
+@debug_rate_limit_job_matching()
+async def get_user_professional_analysis(
+    user_id: str,
+    request: Request
+):
+    """Get professional fit analysis for employers and recruiters (public endpoint)"""
+    try:
+        # Get professional analysis using user service
+        analysis = await user_service.get_professional_analysis(user_id)
+        
+        if not analysis:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found or analysis failed"
+            )
+        
+        return analysis
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in professional analysis: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error occurred while analyzing professional fit"
+        )
