@@ -56,7 +56,9 @@ class UserService:
             expected_salary=user.expected_salary,
             email=user.email,
             # Include section order for consistent display
-            section_order=user.section_order or []
+            section_order=user.section_order or [],
+            profile_score=user.profile_score or 0,
+            profile_variant=user.profile_variant or "default"
         )
 
     async def update_user(self, user_id: str, update_data: UserUpdate) -> Optional[UserInDB]:

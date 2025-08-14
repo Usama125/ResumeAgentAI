@@ -16,6 +16,9 @@ class SectionOrderRequest(BaseModel):
 class SkillOrderRequest(BaseModel):
     skill_ids: List[str]
 
+class ProfileVariantRequest(BaseModel):
+    profile_variant: str
+
 router = APIRouter()
 user_service = UserService()
 auth_service = AuthService()
@@ -203,6 +206,31 @@ async def reorder_skills(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to reorder skills"
+        )
+    
+    return UserResponse(**updated_user.dict())
+
+@router.put("/me/profile-variant", response_model=UserResponse)
+async def update_profile_variant(
+    request: ProfileVariantRequest,
+    current_user = Depends(get_current_user)
+):
+    """Update user's profile view variant"""
+    # Validate profile variant
+    valid_variants = ["default", "compact", "advanced"]
+    if request.profile_variant not in valid_variants:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid profile variant. Valid variants: {valid_variants}"
+        )
+    
+    update_user_data = UserUpdate(profile_variant=request.profile_variant)
+    updated_user = await user_service.update_user(str(current_user.id), update_user_data)
+    
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update profile variant"
         )
     
     return UserResponse(**updated_user.dict())

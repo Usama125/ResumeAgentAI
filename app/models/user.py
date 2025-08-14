@@ -129,6 +129,7 @@ class UserBase(BaseModel):
     profession: Optional[str] = None  # Auto-detected from resume
     section_order: List[str] = []  # Custom section ordering
     profile_score: int = 0  # Profile completeness and quality score (0-100)
+    profile_variant: str = "default"  # Profile view variant (default, compact, advanced)
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -162,6 +163,7 @@ class UserUpdate(BaseModel):
     profession: Optional[str] = None
     section_order: Optional[List[str]] = None
     profile_score: Optional[int] = None
+    profile_variant: Optional[str] = None
 
 class UserInDB(UserBase):
     id: Optional[str] = Field(default=None, alias="_id")
@@ -191,6 +193,7 @@ class UserInDB(UserBase):
     profession: Optional[str] = None
     section_order: List[str] = Field(default_factory=list)
     profile_score: int = 0  # Profile completeness and quality score (0-100)
+    profile_variant: str = "default"  # Profile view variant
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -245,6 +248,7 @@ class PublicUserResponse(BaseModel):
     # Section ordering for public profile display
     section_order: Optional[List[str]] = None
     profile_score: int = 0
+    profile_variant: str = "default"  # Profile view variant
 
 class UserListingResponse(BaseModel):
     """Lightweight response model for user listing - only essential fields"""
