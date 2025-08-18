@@ -23,6 +23,10 @@ class AdvancedRateLimiter:
         # Chat limits
         self.unauth_chat_limit = settings.UNAUTH_DAILY_CHAT_LIMIT
         self.auth_chat_limit = settings.AUTH_DAILY_CHAT_LIMIT
+        
+        # Content generation limits
+        self.unauth_content_generation_limit = settings.UNAUTH_DAILY_CONTENT_GENERATION_LIMIT
+        self.auth_content_generation_limit = settings.AUTH_DAILY_CONTENT_GENERATION_LIMIT
 
     def _create_device_fingerprint(self, request_data: dict) -> str:
         """
@@ -228,6 +232,38 @@ class AdvancedRateLimiter:
                 "is_authenticated": False
             }
 
+    async def check_content_generation_limit(self, user_id: Optional[str] = None, request_data: dict = None) -> Dict[str, any]:
+        """Check content generation rate limit with enhanced tracking"""
+        db = await get_database()
+        
+        if user_id:
+            # Authenticated user - use existing logic (already secure)
+            return await self._check_authenticated_limit(
+                db, user_id, "content_generation", self.auth_content_generation_limit
+            )
+        else:
+            # Unauthenticated user - use enhanced multi-identifier tracking
+            identifiers = await self._get_all_client_identifiers(request_data or {})
+            
+            # Check limits across all identifiers
+            result = await self._check_multiple_identifiers(
+                db, identifiers, "content_generation", self.unauth_content_generation_limit
+            )
+            
+            if not result["allowed"]:
+                return result
+            
+            # Increment all identifiers
+            await self._increment_all_identifiers(db, identifiers, "content_generation")
+            
+            return {
+                "allowed": True,
+                "remaining": max(0, self.unauth_content_generation_limit - int(result["weighted_count"]) - 1),
+                "reset_in_seconds": None,
+                "message": "Request allowed",
+                "is_authenticated": False
+            }
+
     async def _check_authenticated_limit(self, db, user_id: str, request_type: str, daily_limit: int) -> Dict[str, any]:
         """Check rate limit for authenticated users (SECURE - cannot be bypassed)"""
         user_collection = db.users
@@ -281,7 +317,8 @@ class AdvancedRateLimiter:
         
         base_messages = {
             "job_matching": f"🎯 Hold up there, search champion! You've reached your daily job matching limit of {daily_limit} requests as a {user_type}. Your dedication to finding the perfect match is admirable! 🚀",
-            "chat": f"💬 Whoa there, social butterfly! You've hit your daily chat limit of {daily_limit} conversations as a {user_type}. Your networking game is strong! 🤝"
+            "chat": f"💬 Whoa there, social butterfly! You've hit your daily chat limit of {daily_limit} conversations as a {user_type}. Your networking game is strong! 🤝",
+            "content_generation": f"✨ Wow! You've reached your daily content generation limit of {daily_limit} creations as a {user_type}. Your productivity is impressive! 📝"
         }
         
         if not is_authenticated:

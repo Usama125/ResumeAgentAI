@@ -23,10 +23,12 @@ class Settings(BaseSettings):
     # Rate Limiting - Unauthenticated Users
     UNAUTH_DAILY_JOB_MATCHING_LIMIT: int = 3000
     UNAUTH_DAILY_CHAT_LIMIT: int = 10
+    UNAUTH_DAILY_CONTENT_GENERATION_LIMIT: int = 3
     
     # Rate Limiting - Authenticated Users
     AUTH_DAILY_JOB_MATCHING_LIMIT: int = 3000
     AUTH_DAILY_CHAT_LIMIT: int = 15
+    AUTH_DAILY_CONTENT_GENERATION_LIMIT: int = 5
     
     # Rate Limiting - Reset Time Configuration
     RATE_LIMIT_RESET_HOURS: int = 24  # Hours until rate limit resets

@@ -5,7 +5,7 @@ import os
 
 from app.config import settings
 from app.database import connect_to_mongo, close_mongo_connection
-from app.routers import auth, users, onboarding, chat, search, job_matching, websocket, admin, dummy_users
+from app.routers import auth, users, onboarding, chat, search, job_matching, websocket, admin, dummy_users, content_generator
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -40,6 +40,7 @@ app.include_router(job_matching.router, prefix=f"{settings.API_V1_STR}/job-match
 app.include_router(websocket.router, prefix=f"{settings.API_V1_STR}", tags=["websocket"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}", tags=["admin"])
 app.include_router(dummy_users.router, tags=["dummy-users"])
+app.include_router(content_generator.router, prefix=f"{settings.API_V1_STR}", tags=["content-generator"])
 
 # Database events
 @app.on_event("startup")

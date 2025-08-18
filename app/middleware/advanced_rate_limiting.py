@@ -190,6 +190,78 @@ def advanced_rate_limit_chat():
         return wrapper
     return decorator
 
+def advanced_rate_limit_content_generation():
+    """Enhanced rate limiting decorator for content generation with bypass prevention"""
+    def decorator(func: Callable):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Extract request from args/kwargs
+            request = None
+            for arg in args:
+                if isinstance(arg, Request):
+                    request = arg
+                    break
+            
+            if not request:
+                request = kwargs.get('request')
+            
+            if not request:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Request object not found for rate limiting"
+                )
+            
+            # Try to get current user (optional)
+            try:
+                current_user = await get_current_user_optional(request)
+                user_id = str(current_user.id) if current_user else None
+            except:
+                user_id = None
+            
+            # Get enhanced client info
+            client_info = get_enhanced_client_info(request)
+            
+            # Log the attempt for monitoring
+            logger.info(f"Content generation request from {'user ' + user_id if user_id else 'anonymous'} - IP: {client_info['ip_address']}")
+            
+            # Check rate limit with advanced detection
+            try:
+                rate_limit_result = await advanced_rate_limiter.check_content_generation_limit(
+                    user_id=user_id,
+                    request_data=client_info
+                )
+                
+                if not rate_limit_result["allowed"]:
+                    # Log the rate limit violation
+                    detection_method = rate_limit_result.get("detection_method", "standard")
+                    logger.warning(f"Content generation rate limit exceeded - Method: {detection_method}, IP: {client_info['ip_address']}, UA: {client_info['user_agent'][:50]}")
+                    
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail={
+                            "message": rate_limit_result["message"],
+                            "remaining": rate_limit_result["remaining"],
+                            "reset_in_seconds": rate_limit_result["reset_in_seconds"],
+                            "is_authenticated": rate_limit_result["is_authenticated"],
+                            "rate_limit_type": "content_generation",
+                            "detection_method": detection_method
+                        }
+                    )
+                
+                # Proceed with the request
+                response = await func(*args, **kwargs)
+                return response
+                
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Advanced rate limiting error: {str(e)}")
+                # Fallback: continue with request if rate limiting fails
+                return await func(*args, **kwargs)
+        
+        return wrapper
+    return decorator
+
 # Monitoring function to detect potential abuse patterns
 async def detect_abuse_patterns():
     """
