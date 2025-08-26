@@ -8,6 +8,7 @@ from app.services.file_service import FileService
 from app.routers.auth import get_current_user
 from app.database import get_database
 from app.middleware.debug_rate_limiting import debug_rate_limit_job_matching
+from app.utils.analytics_tracker import track_profile_view, track_profile_update, track_resume_download
 
 # Request models for reordering
 class SectionOrderRequest(BaseModel):
@@ -32,6 +33,7 @@ async def get_current_user_profile(current_user = Depends(get_current_user)):
 @router.put("/me", response_model=UserResponse)
 async def update_current_user_profile(
     update_data: UserUpdate,
+    request: Request,
     current_user = Depends(get_current_user)
 ):
     """Update current user's profile"""
@@ -42,6 +44,10 @@ async def update_current_user_profile(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update profile"
         )
+    
+    # Track profile update
+    updated_fields = [field for field, value in update_data.dict(exclude_unset=True).items() if value is not None]
+    await track_profile_update(request, updated_fields)
     
     return UserResponse(**updated_user.dict())
 
@@ -236,7 +242,7 @@ async def update_profile_variant(
     return UserResponse(**updated_user.dict())
 
 @router.get("/{user_id}", response_model=PublicUserResponse)
-async def get_user_profile(user_id: str):
+async def get_user_profile(user_id: str, request: Request):
     """Get public user profile"""
     user = await user_service.get_public_user(user_id)
     
@@ -246,10 +252,13 @@ async def get_user_profile(user_id: str):
             detail="User not found"
         )
     
+    # Track profile view
+    await track_profile_view(request, user_id, user.username or "")
+    
     return user
 
 @router.get("/username/{username}", response_model=PublicUserResponse)
-async def get_user_profile_by_username(username: str):
+async def get_user_profile_by_username(username: str, request: Request):
     """Get public user profile by username"""
     user = await auth_service.get_user_by_username(username)
     
@@ -266,6 +275,9 @@ async def get_user_profile_by_username(username: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+    
+    # Track profile view
+    await track_profile_view(request, str(user.id), username)
     
     return public_user
 
@@ -1381,6 +1393,15 @@ async def get_current_user_ai_analysis(
     current_user = Depends(get_current_user)
 ):
     """Get AI analysis of current user's profile (strengths and weaknesses)"""
+    # Track AI analysis request
+    from app.utils.analytics_tracker import track_action_from_request
+    from app.models.admin import ActionType
+    await track_action_from_request(
+        request, 
+        ActionType.AI_RESUME_ANALYSIS,
+        {"analysis_type": "self_profile", "user_id": str(current_user.id)}
+    )
+    
     analysis = await user_service.get_profile_analysis(str(current_user.id))
     
     if not analysis:
@@ -1398,6 +1419,28 @@ async def get_user_ai_analysis(
     request: Request
 ):
     """Get AI analysis of any user's profile (public endpoint)"""
+    # Track AI analysis request
+    try:
+        from app.services.analytics_service import get_analytics_service
+        from app.models.admin import ActionType
+        from app.database import get_database
+        
+        async for db in get_database():
+            analytics = get_analytics_service(db)
+            await analytics.track_action(
+                action_type=ActionType.AI_RESUME_ANALYSIS,
+                user_id=None,
+                username=None,
+                details={"analysis_type": "other_profile", "target_user_id": user_id},
+                ip_address=request.headers.get('x-forwarded-for') or request.headers.get('x-real-ip') or 'unknown',
+                user_agent=request.headers.get('user-agent') or 'unknown'
+            )
+            break
+    except Exception as tracking_error:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"AI analysis tracking failed: {str(tracking_error)}")
+    
     analysis = await user_service.get_profile_analysis(user_id)
     
     if not analysis:
@@ -1416,6 +1459,15 @@ async def get_user_professional_analysis(
 ):
     """Get professional fit analysis for employers and recruiters (public endpoint)"""
     try:
+        # Track AI professional analysis request
+        from app.utils.analytics_tracker import track_action_from_request
+        from app.models.admin import ActionType
+        await track_action_from_request(
+            request, 
+            ActionType.AI_RESUME_ANALYSIS,
+            {"analysis_type": "professional_fit", "target_user_id": user_id}
+        )
+        
         # Get professional analysis using user service
         analysis = await user_service.get_professional_analysis(user_id)
         

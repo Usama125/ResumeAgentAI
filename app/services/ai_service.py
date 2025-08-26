@@ -106,6 +106,31 @@ class AIService:
         try:
             logger.info("Starting comprehensive multi-section extraction...")
             
+            # Track AI resume processing for onboarding
+            try:
+                from app.services.analytics_service import get_analytics_service
+                from app.models.admin import ActionType
+                from app.database import get_database
+                
+                # Get database instance
+                async for db in get_database():
+                    analytics = get_analytics_service(db)
+                    await analytics.track_action(
+                        action_type=ActionType.AI_RESUME_ANALYSIS,
+                        user_id=user_id,
+                        username=None,  # User may not have username yet during onboarding
+                        details={
+                            "processing_type": "onboarding_extraction",
+                            "content_length": len(resume_content),
+                            "agent_count": 8
+                        },
+                        ip_address="server",
+                        user_agent="onboarding_service"
+                    )
+                    break
+            except Exception as tracking_error:
+                logger.error(f"Analytics tracking failed: {str(tracking_error)}")
+            
             # Import progress update function
             from app.routers.websocket import send_progress_update
             

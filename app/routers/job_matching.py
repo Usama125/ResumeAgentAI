@@ -114,6 +114,14 @@ async def get_job_match_summary(
     Requires secure request verification for access.
     """
     try:
+        # Track AI job matching request
+        from app.utils.analytics_tracker import track_action_from_request
+        from app.models.admin import ActionType
+        await track_action_from_request(
+            request, 
+            ActionType.AI_CONTENT_GENERATION,
+            {"job_matching_type": "summary", "query_length": len(q)}
+        )
         
         summary = await job_matching_service.get_job_match_summary(q)
         
@@ -145,6 +153,14 @@ async def analyze_candidate_for_job(
     Requires secure request verification for access.
     """
     try:
+        # Track AI job matching analysis request
+        from app.utils.analytics_tracker import track_action_from_request
+        from app.models.admin import ActionType
+        await track_action_from_request(
+            request, 
+            ActionType.AI_CONTENT_GENERATION,
+            {"job_matching_type": "candidate_analysis", "target_user_id": user_id, "query_length": len(q)}
+        )
         
         # Get user profile
         from app.services.user_service import UserService

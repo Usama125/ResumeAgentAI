@@ -180,6 +180,7 @@ class UserInDB(UserBase):
     password_reset_token: Optional[str] = None  # Store password reset token
     password_reset_expires_at: Optional[datetime] = None  # Token expiration
     google_id: Optional[str] = None  # Google OAuth ID
+    is_blocked: bool = False  # Admin can block users
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     # Enhanced fields with defaults for backward compatibility

@@ -6,6 +6,7 @@ from app.services.user_service import UserService
 from app.services.auth_service import AuthService
 from app.utils.secure_auth import verify_secure_request
 from app.middleware.advanced_rate_limiting import advanced_rate_limit_chat
+from app.utils.analytics_tracker import track_ai_chat
 import logging
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,10 @@ async def chat_with_profile(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User profile not found"
             )
+        
+        # Track AI chat interaction
+        message_length = len(chat_request.message) if hasattr(chat_request, 'message') else 0
+        await track_ai_chat(request, message_length)
         
         # Only return success - AI response handled by frontend
         return {

@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     ALGOLIA_SEARCH_KEY: str = "35e6909c47fc60a52be842d593de7967"
     ALGOLIA_INDEX_NAME: str = "users"
     
+    # Admin Configuration
+    ADMIN_ACCESS_KEY: str = "admin-secure-key-change-in-production"
+    
     # CORS - Strict Origin Control
     BACKEND_CORS_ORIGINS: List[str] = [
         "http://localhost:3000",

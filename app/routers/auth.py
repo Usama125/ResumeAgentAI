@@ -9,6 +9,7 @@ from app.services.email_service import email_service
 from app.services.google_oauth_service import GoogleOAuthService
 from app.utils.security import create_access_token, create_refresh_token, verify_token
 from app.utils.username_generator import UsernameGenerator
+from app.utils.analytics_tracker import track_user_registration, track_user_login
 from app.config import settings
 import logging
 
@@ -19,7 +20,7 @@ security = HTTPBearer()
 auth_service = AuthService()
 
 @router.post("/register", response_model=dict)
-async def register(user: UserCreate):
+async def register(user: UserCreate, request: Request):
     """Register a new user"""
     # Validate username
     is_valid, error_message = UsernameGenerator.validate_username(user.username)
@@ -47,6 +48,9 @@ async def register(user: UserCreate):
     
     # Create new user
     new_user = await auth_service.create_user(user)
+    
+    # Track user registration
+    await track_user_registration(request)
     
     # Generate tokens
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -80,7 +84,7 @@ class LoginRequest(BaseModel):
     password: str
 
 @router.post("/login", response_model=dict)
-async def login(login_data: LoginRequest):
+async def login(login_data: LoginRequest, request: Request):
     """Login user and return JWT token"""
     user = await auth_service.authenticate_user(login_data.email, login_data.password)
     if not user:
@@ -88,6 +92,16 @@ async def login(login_data: LoginRequest):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
         )
+    
+    # Check if user is blocked
+    if user.is_blocked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are blocked by the admin, please contact support"
+        )
+    
+    # Track user login
+    await track_user_login(request)
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
@@ -125,6 +139,14 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
+    
+    # Check if user is blocked
+    if user.is_blocked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are blocked by the admin, please contact support"
+        )
+    
     return user
 
 async def get_current_user_optional(request: Request) -> Optional[UserInDB]:
