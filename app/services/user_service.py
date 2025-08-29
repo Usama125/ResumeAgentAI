@@ -117,6 +117,15 @@ class UserService:
                     print(f"⚠️ [USER_SERVICE] Algolia sync exception for user {user_id}: {str(algolia_error)}")
                     import traceback
                     traceback.print_exc()
+                
+                # Invalidate AI analysis cache since profile was updated
+                try:
+                    from app.services.ai_analysis_cache import AIAnalysisCache
+                    cache = AIAnalysisCache()
+                    await cache.invalidate_user_cache(user_id)
+                    print(f"✅ [USER_SERVICE] AI analysis cache invalidated for user {user_id}")
+                except Exception as cache_error:
+                    print(f"⚠️ [USER_SERVICE] AI analysis cache invalidation failed: {str(cache_error)}")
             
             if updated_user and "skills" in update_dict:
                 print(f"🎯 [USER_SERVICE] SKILLS DEBUG - After DB update, user skills: {updated_user.skills}")
@@ -127,20 +136,60 @@ class UserService:
         return None
     
     async def get_profile_analysis(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get detailed profile analysis with strengths and weaknesses"""
-        user = await self.get_user_by_id(user_id)
-        if not user:
-            return None
-        return self.profile_scoring_service.get_profile_analysis(user)
+        """Get detailed profile analysis with strengths and weaknesses - Now uses OpenAI + caching"""
+        try:
+            print(f"🚀 [USER_SERVICE] Getting profile analysis for user {user_id}")
+            user = await self.get_user_by_id(user_id)
+            if not user:
+                print(f"❌ [USER_SERVICE] User {user_id} not found")
+                return None
+            
+            print(f"✅ [USER_SERVICE] User found, last updated: {user.updated_at}")
+            
+            # Use AI analysis cache for OpenAI-powered analysis
+            from app.services.ai_analysis_cache import AIAnalysisCache
+            cache = AIAnalysisCache()
+            
+            print(f"🤖 [USER_SERVICE] Calling AI analysis cache for user {user_id}")
+            analysis = await cache.get_or_generate_profile_analysis(user_id, user.updated_at)
+            
+            if analysis:
+                print(f"✅ [USER_SERVICE] Got analysis from cache service with keys: {list(analysis.keys())}")
+                return analysis
+            else:
+                print(f"❌ [USER_SERVICE] AI analysis cache returned None, using fallback")
+            
+            # Fallback to old scoring method
+            fallback_analysis = self.profile_scoring_service.get_profile_analysis(user)
+            print(f"🔄 [USER_SERVICE] Using fallback analysis with keys: {list(fallback_analysis.keys())}")
+            return fallback_analysis
+            
+        except Exception as e:
+            print(f"💥 [USER_SERVICE] Error in get_profile_analysis: {str(e)}")
+            import traceback
+            print(f"💥 [USER_SERVICE] Traceback: {traceback.format_exc()}")
+            # Fallback to old method
+            user = await self.get_user_by_id(user_id)
+            if not user:
+                return None
+            return self.profile_scoring_service.get_profile_analysis(user)
 
     async def get_professional_analysis(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get professional fit analysis for employers and recruiters"""
+        """Get professional fit analysis for employers and recruiters - Now uses caching"""
         try:
             user = await self.get_user_by_id(user_id)
             if not user:
                 return None
             
-            # Get professional analysis from AI service
+            # Use AI analysis cache for public analysis
+            from app.services.ai_analysis_cache import AIAnalysisCache
+            cache = AIAnalysisCache()
+            
+            analysis = await cache.get_or_generate_public_analysis(user_id, user.updated_at)
+            if analysis:
+                return analysis
+            
+            # Fallback to direct AI service call
             from app.services.ai_service import AIService
             ai_service = AIService()
             analysis = await ai_service.analyze_professional_fit(user.dict())

@@ -1616,7 +1616,7 @@ DO NOT return JSON. ONLY return the experience text."""
 
             # Get AI response
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are an expert HR recruiter and career analyst. Provide professional, objective assessments for employers and recruiters."},
                     {"role": "user", "content": analysis_prompt}

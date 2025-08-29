@@ -763,3 +763,73 @@ async def download_resume_pdf(
         
     except Exception as e:
         raise HTTPException(status_code=404, detail="Resume not found")
+
+# ===== AI ANALYSIS ADMIN ENDPOINTS =====
+
+@router.get("/ai-analyses")
+async def get_ai_analyses(
+    admin_key: str = Depends(verify_admin_access),
+    limit: int = Query(50, le=200),
+    skip: int = Query(0, ge=0)
+):
+    """Get all AI analyses for admin review"""
+    try:
+        from ..services.ai_analysis_cache import AIAnalysisCache
+        
+        cache = AIAnalysisCache()
+        analyses = await cache.get_all_analyses_for_admin(limit=limit, skip=skip)
+        
+        return {
+            "analyses": analyses,
+            "total": len(analyses),
+            "limit": limit,
+            "skip": skip
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get AI analyses: {str(e)}")
+
+@router.delete("/ai-analyses/user/{user_id}")
+async def delete_user_ai_analyses(
+    user_id: str,
+    admin_key: str = Depends(verify_admin_access)
+):
+    """Delete all AI analyses for a specific user"""
+    try:
+        from ..services.ai_analysis_cache import AIAnalysisCache
+        
+        cache = AIAnalysisCache()
+        await cache.invalidate_user_cache(user_id)
+        
+        return {"message": f"All AI analyses for user {user_id} have been deleted"}
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete AI analyses: {str(e)}")
+
+@router.get("/ai-analyses/stats")
+async def get_ai_analysis_stats(
+    admin_key: str = Depends(verify_admin_access),
+    db = Depends(get_database)
+):
+    """Get statistics about AI analyses usage"""
+    try:
+        # Count total analyses by type
+        profile_analysis_count = await db.ai_analysis.count_documents({"analysis_type": "profile"})
+        public_analysis_count = await db.ai_analysis.count_documents({"analysis_type": "public"})
+        
+        # Get recent activity (last 7 days)
+        from datetime import timedelta
+        week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        recent_analyses = await db.ai_analysis.count_documents({
+            "created_at": {"$gte": week_ago}
+        })
+        
+        return {
+            "total_analyses": profile_analysis_count + public_analysis_count,
+            "profile_analyses": profile_analysis_count,
+            "public_analyses": public_analysis_count,
+            "recent_analyses_7d": recent_analyses
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get AI analysis stats: {str(e)}")
