@@ -1,3 +1,0 @@
-This is a test LinkedIn PDF content for testing purposes.
-Name: Test User
-Position: Software Engineer
