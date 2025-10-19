@@ -51,6 +51,7 @@ class AuthService:
         user_dict["created_at"] = datetime.utcnow()
         user_dict["updated_at"] = datetime.utcnow()
         user_dict["onboarding_completed"] = False
+        user_dict["onboarding_skipped"] = False
         user_dict["daily_requests"] = 0
         user_dict["last_request_reset"] = datetime.utcnow()
         user_dict["rating"] = 4.5

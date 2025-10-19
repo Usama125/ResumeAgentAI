@@ -152,6 +152,7 @@ class UserUpdate(BaseModel):
     work_preferences: Optional[WorkPreferences] = None
     onboarding_progress: Optional[OnboardingProgress] = None
     onboarding_completed: Optional[bool] = None
+    onboarding_skipped: Optional[bool] = None
     # Enhanced fields
     contact_info: Optional[ContactInfo] = None
     education: Optional[List[Education]] = None
@@ -170,6 +171,7 @@ class UserInDB(UserBase):
     hashed_password: str
     rating: float = 4.5
     onboarding_completed: bool = False
+    onboarding_skipped: bool = False
     onboarding_progress: OnboardingProgress = Field(default_factory=lambda: OnboardingProgress())
     daily_requests: int = 0
     last_request_reset: datetime = Field(default_factory=datetime.utcnow)
@@ -205,6 +207,7 @@ class UserResponse(UserBase):
     id: str
     rating: float
     onboarding_completed: bool
+    onboarding_skipped: bool
     onboarding_progress: OnboardingProgress
     created_at: datetime
     # Enhanced fields

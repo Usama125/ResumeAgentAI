@@ -437,6 +437,7 @@ async def step_4_salary_availability(
     try:
         update_data = {
             "onboarding_completed": True,
+            "onboarding_skipped": False,
             "onboarding_progress": {
                 "step_1_pdf_upload": current_user.onboarding_progress.step_1_pdf_upload,
                 "step_2_profile_info": current_user.onboarding_progress.step_2_profile_info,
@@ -508,16 +509,16 @@ async def skip_to_profile(
         )
     
     try:
-        # Mark onboarding as completed
+        # Mark onboarding as skipped (not completed)
         update_data = {
-            "onboarding_completed": True,
+            "onboarding_skipped": True,
             "onboarding_progress": {
                 "step_1_pdf_upload": OnboardingStepStatus.COMPLETED,
-                "step_2_profile_info": OnboardingStepStatus.COMPLETED,
-                "step_3_work_preferences": OnboardingStepStatus.COMPLETED,
-                "step_4_salary_availability": OnboardingStepStatus.COMPLETED,
+                "step_2_profile_info": OnboardingStepStatus.NOT_STARTED,
+                "step_3_work_preferences": OnboardingStepStatus.NOT_STARTED,
+                "step_4_salary_availability": OnboardingStepStatus.NOT_STARTED,
                 "current_step": 4,
-                "completed": True
+                "completed": False
             }
         }
         
@@ -722,7 +723,9 @@ async def complete_onboarding(
         }
         update_data["work_preferences"] = work_preferences
         
-        # Update onboarding progress to completed
+        # Mark onboarding as completed (not skipped)
+        update_data["onboarding_completed"] = True
+        update_data["onboarding_skipped"] = False
         update_data["onboarding_progress"] = {
             "step_1_pdf_upload": OnboardingStepStatus.COMPLETED,
             "step_2_profile_info": OnboardingStepStatus.COMPLETED,
