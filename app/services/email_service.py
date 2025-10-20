@@ -38,7 +38,7 @@ class EmailService:
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Password Reset - ResumeAgent AI</title>
+                <title>Password Reset - CVChatter</title>
                 <style>
                     body {{
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -85,15 +85,21 @@ class EmailService:
                     }}
                     .reset-button {{
                         display: inline-block;
-                        background: linear-gradient(135deg, #10a37f 0%, #0d8f6f 100%);
-                        color: white;
-                        text-decoration: none;
+                        background: #10a37f !important;
+                        color: white !important;
+                        text-decoration: none !important;
                         padding: 16px 32px;
                         border-radius: 12px;
                         font-weight: 600;
                         font-size: 16px;
                         text-align: center;
                         margin: 20px 0;
+                        border: none;
+                        cursor: pointer;
+                    }}
+                    .reset-button:hover {{
+                        background: #0d8f6f !important;
+                        color: white !important;
                     }}
                     .link-fallback {{
                         background: #f8fafc;
@@ -128,7 +134,7 @@ class EmailService:
                 <div class="container">
                     <div class="email-content">
                         <div class="header">
-                            <div class="logo">🤖 ResumeAgent AI</div>
+                            <div class="logo">🤖 CVChatter</div>
                             <h1 class="title">Password Reset Request</h1>
                             <p class="subtitle">We received a request to reset your password</p>
                         </div>
@@ -136,12 +142,12 @@ class EmailService:
                         <div class="content">
                             <p>Hi {user_name},</p>
                             
-                            <p>We received a request to reset your password for your ResumeAgent AI account. If you didn't make this request, you can safely ignore this email.</p>
+                            <p>We received a request to reset your password for your CVChatter account. If you didn't make this request, you can safely ignore this email.</p>
                             
                             <p>To reset your password, click the button below:</p>
                             
                             <div style="text-align: center; margin: 30px 0;">
-                                <a href="{reset_link}" class="reset-button">Reset My Password</a>
+                                <a href="{reset_link}" class="reset-button" style="display: inline-block; background: #10a37f; color: white !important; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: 600; font-size: 16px; text-align: center; border: none;">Reset My Password</a>
                             </div>
                             
                             <p>Or copy and paste this link in your browser:</p>
@@ -151,12 +157,12 @@ class EmailService:
                                 <strong>Important:</strong> This link will expire in 1 hour for security reasons.
                             </div>
                             
-                            <p>Best regards,<br>The ResumeAgent AI Team</p>
+                            <p>Best regards,<br>The CVChatter Team</p>
                         </div>
                         
                         <div class="footer">
                             <p>This email was sent to {to_email}.</p>
-                            <p>© 2024 ResumeAgent AI. All rights reserved.</p>
+                            <p>© 2024 CVChatter. All rights reserved.</p>
                         </div>
                     </div>
                 </div>
@@ -166,11 +172,11 @@ class EmailService:
             
             # Text fallback
             text_content = f"""
-            Password Reset Request - ResumeAgent AI
+            Password Reset Request - CVChatter
             
             Hi {user_name},
             
-            We received a request to reset your password for your ResumeAgent AI account.
+            We received a request to reset your password for your CVChatter account.
             
             To reset your password, visit this link: {reset_link}
             
@@ -179,12 +185,12 @@ class EmailService:
             If you didn't request this, you can safely ignore this email.
             
             Best regards,
-            The ResumeAgent AI Team
+            The CVChatter Team
             """
             
             # Create email message
             message = MIMEMultipart("alternative")
-            message["Subject"] = "Reset Your Password - ResumeAgent AI"
+            message["Subject"] = "Reset Your Password - CVChatter"
             message["From"] = self.from_email
             message["To"] = to_email
             
@@ -231,7 +237,7 @@ class EmailService:
             <html>
             <head>
                 <meta charset="utf-8">
-                <title>Password Updated - ResumeAgent AI</title>
+                <title>Password Updated - CVChatter</title>
                 <style>
                     body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
                     .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
@@ -244,22 +250,22 @@ class EmailService:
             <body>
                 <div class="container">
                     <div class="header">
-                        <div class="logo">🤖 ResumeAgent AI</div>
+                        <div class="logo">🤖 CVChatter</div>
                         <div class="success-icon">✅</div>
                         <h1 class="title">Password Successfully Updated</h1>
                     </div>
                     
                     <p>Hi {user_name},</p>
-                    <p>This email confirms that your password has been successfully updated for your ResumeAgent AI account.</p>
+                    <p>This email confirms that your password has been successfully updated for your CVChatter account.</p>
                     <p>If you didn't make this change, please contact our support team immediately.</p>
-                    <p>Best regards,<br>The ResumeAgent AI Team</p>
+                    <p>Best regards,<br>The CVChatter Team</p>
                 </div>
             </body>
             </html>
             """
             
             text_content = f"""
-            Password Successfully Updated - ResumeAgent AI
+            Password Successfully Updated - CVChatter
             
             Hi {user_name},
             
@@ -267,12 +273,12 @@ class EmailService:
             If you didn't make this change, please contact support immediately.
             
             Best regards,
-            The ResumeAgent AI Team
+            The CVChatter Team
             """
             
             # Create email message
             message = MIMEMultipart("alternative")
-            message["Subject"] = "Password Successfully Updated - ResumeAgent AI"
+            message["Subject"] = "Password Successfully Updated - CVChatter"
             message["From"] = self.from_email
             message["To"] = to_email
             

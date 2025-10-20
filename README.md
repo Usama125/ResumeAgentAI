@@ -240,4 +240,4 @@ For issues and questions:
 - Review error responses for debugging
 - Ensure all environment variables are set
 - Verify MongoDB connection
-- Check OpenAI API key validity# ResumeAgent
+- Check OpenAI API key validity# CVChatter
