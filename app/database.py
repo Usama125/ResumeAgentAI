@@ -11,8 +11,17 @@ async def get_database() -> motor.motor_asyncio.AsyncIOMotorDatabase:
     return db.database
 
 async def connect_to_mongo():
-    """Create database connection"""
-    db.client = motor.motor_asyncio.AsyncIOMotorClient(settings.MONGODB_URL)
+    """Create database connection with optimized settings for free tier"""
+    # Optimized connection settings for MongoDB Atlas free tier
+    db.client = motor.motor_asyncio.AsyncIOMotorClient(
+        settings.MONGODB_URL,
+        maxPoolSize=10,  # Limit connections for free tier
+        minPoolSize=1,   # Keep at least 1 connection
+        maxIdleTimeMS=30000,  # Close idle connections after 30s
+        serverSelectionTimeoutMS=5000,  # 5s timeout
+        connectTimeoutMS=10000,  # 10s connection timeout
+        socketTimeoutMS=20000,   # 20s socket timeout
+    )
     db.database = db.client[settings.DATABASE_NAME]
     
     # Create indexes for better performance

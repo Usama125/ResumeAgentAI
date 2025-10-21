@@ -250,7 +250,7 @@ async def get_user_profile(user_id: str):
 
 @router.get("/username/{username}", response_model=PublicUserResponse)
 async def get_user_profile_by_username(username: str):
-    """Get public user profile by username"""
+    """Get public user profile by username with caching"""
     user = await auth_service.get_user_by_username(username)
     
     if not user:
