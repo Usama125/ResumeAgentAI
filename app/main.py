@@ -33,13 +33,22 @@ async def add_cache_headers(request: Request, call_next):
     response = await call_next(request)
     
     # Add cache headers for profile endpoints (only for GET requests)
+    # Don't cache PUT/POST/DELETE requests to ensure fresh data after updates
     if (request.method == "GET" and 
         (request.url.path.startswith("/api/v1/users/username/") or 
          request.url.path.startswith("/api/v1/users/")) and
+        not request.url.path.endswith("/me") and  # Don't cache current user's profile
         not request.url.path.endswith("/ai-analysis") and  # Don't cache AI analysis
         not request.url.path.endswith("/professional-analysis")):
         response.headers["Cache-Control"] = "public, max-age=300"  # 5 minutes
         response.headers["ETag"] = f'"{hash(request.url.path)}"'
+    
+    # Ensure profile update endpoints don't get cached
+    elif (request.method in ["PUT", "POST", "DELETE"] and 
+          request.url.path.startswith("/api/v1/users/")):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     
     return response
 

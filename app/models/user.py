@@ -139,6 +139,7 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     designation: Optional[str] = None
     location: Optional[str] = None
+    experience: Optional[str] = None
     profile_picture: Optional[str] = None
     is_looking_for_job: Optional[bool] = None
     expected_salary: Optional[str] = None

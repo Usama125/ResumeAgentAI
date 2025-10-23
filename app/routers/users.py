@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File, Query
+from fastapi import APIRouter, HTTPException, Depends, status, Request, UploadFile, File, Query, Response
+from fastapi.responses import JSONResponse
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from app.models.user import UserResponse, UserUpdate, PublicUserResponse
@@ -27,7 +28,19 @@ file_service = FileService()
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user = Depends(get_current_user)):
     """Get current user's profile"""
-    return UserResponse(**current_user.dict())
+    user_data = UserResponse(**current_user.dict())
+    
+    # Return with cache-busting headers to ensure fresh data
+    response = Response(
+        content=user_data.json(),
+        media_type="application/json",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+    return response
 
 @router.put("/me", response_model=UserResponse)
 async def update_current_user_profile(
@@ -43,7 +56,19 @@ async def update_current_user_profile(
             detail="Failed to update profile"
         )
     
-    return UserResponse(**updated_user.dict())
+    user_data = UserResponse(**updated_user.dict())
+    
+    # Return with cache-busting headers to ensure fresh data
+    response = Response(
+        content=user_data.json(),
+        media_type="application/json",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+    return response
 
 @router.put("/me/sections/reorder", response_model=UserResponse)
 async def reorder_sections(
@@ -289,11 +314,18 @@ async def upload_profile_picture(
                 detail="Failed to update profile picture"
             )
         
-        return {
-            "success": True,
-            "message": "Profile picture updated successfully",
-            "profile_picture_url": profile_picture_url
-        }
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Profile picture updated successfully",
+                "profile_picture_url": profile_picture_url
+            },
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
         
     except HTTPException:
         raise
@@ -321,10 +353,17 @@ async def delete_profile_picture(current_user = Depends(get_current_user)):
                     detail="Failed to update user profile"
                 )
         
-        return {
-            "success": True,
-            "message": "Profile picture deleted successfully"
-        }
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Profile picture deleted successfully"
+            },
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
         
     except Exception as e:
         raise HTTPException(
