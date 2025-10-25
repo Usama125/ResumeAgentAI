@@ -53,7 +53,10 @@ class UserService:
             volunteer_experience=user.volunteer_experience or [],
             interests=user.interests or [],
             profession=user.profession,
+            # Work preferences for AI chat access
+            work_preferences=user.work_preferences,
             expected_salary=user.expected_salary,
+            current_salary=user.current_salary,
             email=user.email,
             # Include section order for consistent display
             section_order=user.section_order or [],

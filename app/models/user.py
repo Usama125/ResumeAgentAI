@@ -246,8 +246,11 @@ class PublicUserResponse(BaseModel):
     volunteer_experience: Optional[List[VolunteerExperience]] = None
     interests: Optional[List[str]] = None
     profession: Optional[str] = None
+    # Work preferences for AI chat access
+    work_preferences: Optional[WorkPreferences] = None
     # Additional fields that might be needed
     expected_salary: Optional[str] = None
+    current_salary: Optional[str] = None
     email: Optional[str] = None
     # Section ordering for public profile display
     section_order: Optional[List[str]] = None
