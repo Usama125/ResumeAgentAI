@@ -130,6 +130,7 @@ class UserBase(BaseModel):
     section_order: List[str] = []  # Custom section ordering
     profile_score: int = 0  # Profile completeness and quality score (0-100)
     profile_variant: str = "default"  # Profile view variant (default, compact, advanced)
+    is_test_user: bool = False  # Flag to identify test/dummy users (hidden from public)
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -197,6 +198,7 @@ class UserInDB(UserBase):
     section_order: List[str] = Field(default_factory=list)
     profile_score: int = 0  # Profile completeness and quality score (0-100)
     profile_variant: str = "default"  # Profile view variant
+    is_test_user: bool = False  # Flag to identify test/dummy users (hidden from public)
 
     model_config = ConfigDict(
         populate_by_name=True,

@@ -28,13 +28,13 @@ async def get_admin_users(
 ):
     """Get users for admin panel with newest-first sorting and pagination"""
     try:
-        # Get total count of users
-        total_count = await db.users.count_documents({})
+        # Get total count of users (excluding test users)
+        total_count = await db.users.count_documents({"is_test_user": {"$ne": True}})
         
-        # Get users sorted by created_at descending (newest first)
+        # Get users sorted by created_at descending (newest first, excluding test users)
         cursor = (
             db.users
-            .find({}, {
+            .find({"is_test_user": {"$ne": True}}, {
                 "_id": 1,
                 "name": 1,
                 "username": 1,

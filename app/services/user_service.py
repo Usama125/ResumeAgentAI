@@ -166,7 +166,8 @@ class UserService:
         
         search_filter = {}
         
-        # Exclude users who haven't completed first step of onboarding
+        # Exclude test users and users who haven't completed first step of onboarding
+        search_filter["is_test_user"] = {"$ne": True}
         search_filter["$or"] = [
             {"onboarding_progress.step_1_pdf_upload": {"$ne": "not_started"}},
             {"onboarding_progress": {"$exists": False}},
