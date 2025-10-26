@@ -55,7 +55,6 @@ env.bak/
 venv.bak/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -92,3 +91,7 @@ uploads/profiles/*
 .mypy_cache/
 .dmypy.json
 dmypy.json
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
